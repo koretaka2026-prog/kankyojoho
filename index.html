@@ -1,26 +1,72 @@
 <style>
-  .mobile-menu a {
-    display: block;
-    font-size: 20px;
-    padding: 14px 18px;
-    margin-bottom: 12px;
-    background-color: #f8f9fa;
-    color: #0056b3;
-    text-decoration: none;
-    border-radius: 8px;
-    border: 1px solid #dee2e6;
-    font-weight: bold;
+  .mobile-menu {
+    max-width: 400px;
+    margin: 0 auto;
+    padding: 16px;
+    background: #0f172a; /* 深みのあるダークブルー背景 */
+    border-radius: 16px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
   }
+
+  .mobile-menu a {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 16px;
+    padding: 16px 20px;
+    margin-bottom: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    color: #f8fafc;
+    text-decoration: none;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(8px);
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* 最後の要素の下マージンを消去 */
+  .mobile-menu a:last-child {
+    margin-bottom: 0;
+  }
+
+  /* 右側の矢印アイコン */
+  .mobile-menu a::after {
+    content: '›';
+    font-size: 20px;
+    color: #38bdf8;
+    transition: transform 0.25s ease;
+  }
+
+  /* ホバー・タップ時の効果 */
+  .mobile-menu a:hover {
+    background: rgba(56, 189, 248, 0.15);
+    border-color: rgba(56, 189, 248, 0.5);
+    color: #38bdf8;
+    transform: translateX(4px);
+    box-shadow: 0 4px 12px rgba(56, 189, 248, 0.15);
+  }
+
+  .mobile-menu a:hover::after {
+    transform: translateX(4px);
+  }
+
+  /* クリック（タップ）した瞬間 */
   .mobile-menu a:active {
-    background-color: #e2e6ea;
+    transform: translateX(2px) scale(0.98);
+    background: rgba(56, 189, 248, 0.25);
   }
 </style>
 
 <div class="mobile-menu">
     <a href="GitHub使用方法.pdf">GitHub使用方法</a>
     <a href="game.html">フルーツキャッチ</a>
-    <a href=https://koretaka2026-prog.github.io/index/count_sheep.html>羊を数える</a>
-    <a href=https://koretaka2026-prog.github.io/index/super_runner_bros.html>Super rnner bros.</a>
-    <a href=https://koretaka2026-prog.github.io/index/guitar.html>ギター</a>
-    <a href=https://koretaka2026-prog.github.io/index/flick_tetris.html>フリックテトリス</a>
+    <a href="https://koretaka2026-prog.github.io/index/count_sheep.html">羊を数える</a>
+    <a href="https://koretaka2026-prog.github.io/index/super_runner_bros.html">Super runner bros.</a>
+    <a href="https://koretaka2026-prog.github.io/index/guitar.html">ギター</a>
+    <a href="https://koretaka2026-prog.github.io/index/flick_tetris.html">フリックテトリス</a>
 </div>
