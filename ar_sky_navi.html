@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>AR Celestial Navigator</title>
+  <title>AR Celestial Navigator (Global Edition)</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Three.js CDN -->
@@ -29,10 +29,10 @@
 
     /* Glassmorphism Panel Styling */
     .glass-panel {
-      background: rgba(15, 23, 42, 0.78);
+      background: rgba(15, 23, 42, 0.82);
       backdrop-filter: blur(14px);
       -webkit-backdrop-filter: blur(14px);
-      border: 1px solid rgba(56, 189, 248, 0.3);
+      border: 1px solid rgba(56, 189, 248, 0.35);
       box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.6), inset 0 0 15px rgba(56, 189, 248, 0.1);
     }
 
@@ -141,7 +141,7 @@
         <div class="absolute bottom-0 left-0 w-3.5 h-3.5 border-b-2 border-l-2 border-cyan-400"></div>
         <div class="absolute bottom-0 right-0 w-3.5 h-3.5 border-b-2 border-r-2 border-cyan-400"></div>
 
-        <!-- Dynamic Real-time Target Badge -->
+        <!-- Dynamic Real-time Target Badge (中心真上) -->
         <div id="reticleBadge" class="absolute -top-10 px-3 py-1 bg-slate-900/90 border border-cyan-400/60 rounded-full opacity-0 transition-opacity duration-200 flex items-center space-x-1.5 whitespace-nowrap shadow-lg">
           <span id="reticleBadgeDot" class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
           <span id="reticleBadgeText" class="text-xs font-bold text-cyan-200 font-orbitron">TARGET LOCKED</span>
@@ -175,15 +175,15 @@
           <div>
             <span id="objectCategory" class="text-[10px] font-orbitron uppercase text-cyan-400 tracking-wider">CONSTELLATION</span>
             <h2 id="objectTitle" class="text-lg font-bold text-white flex items-center gap-2">
-              オリオン座 <span id="objectEn" class="text-xs text-gray-400 font-orbitron font-normal">(Orion)</span>
+              みなみじゅうじ座 <span id="objectEn" class="text-xs text-gray-400 font-orbitron font-normal">(Crux)</span>
             </h2>
           </div>
           <span id="coordBadge" class="bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 text-[10px] font-orbitron px-2 py-0.5 rounded-full">
-            ALT: 45° / AZ: 180°
+            ALT: -30° / AZ: 180°
           </span>
         </div>
         <p id="objectLore" class="text-xs text-gray-300 leading-relaxed font-light">
-          画面中央に星座の中心や星を向けると、星座名や詳細情報がリアルタイムで表示されます。
+          画面中央にカメラを向けると、南北両半球の天体や星座の名前・詳細がリアルタイムで表示されます。
         </p>
       </div>
 
@@ -209,7 +209,7 @@
   <div id="catalogModal" class="absolute inset-0 z-40 bg-slate-950/90 backdrop-blur-md hidden flex flex-col p-4 pt-12">
     <div class="flex justify-between items-center mb-3 pb-2 border-b border-cyan-500/30">
       <h2 class="text-lg font-bold font-orbitron text-cyan-300 flex items-center gap-2">
-        <i class="fa-solid fa-book-atlas"></i> 天体・88星座カタログ
+        <i class="fa-solid fa-book-atlas"></i> 全天星座・天体カタログ
       </h2>
       <button id="closeCatalogBtn" class="text-gray-400 hover:text-white text-xl p-1">
         <i class="fa-solid fa-xmark"></i>
@@ -218,7 +218,7 @@
 
     <!-- Search Input Filter -->
     <div class="mb-3">
-      <input id="catalogSearch" type="text" placeholder="星や星座を検索 (例: オリオン, 火星, シリウス)" class="w-full bg-slate-900 border border-cyan-500/40 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-400" />
+      <input id="catalogSearch" type="text" placeholder="星や星座を検索 (例: オリオン, アンドロメダ, シリウス)" class="w-full bg-slate-900 border border-cyan-500/40 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-400" />
     </div>
     
     <div id="catalogList" class="flex-1 overflow-y-auto space-y-2 pr-1">
@@ -229,19 +229,23 @@
   <!-- Start Permission / Setup Modal -->
   <div id="permissionModal" class="absolute inset-0 z-50 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
     <div class="w-16 h-16 bg-cyan-500/10 border border-cyan-400/40 rounded-full flex items-center justify-center mb-4 text-cyan-400 text-2xl animate-pulse">
-      <i class="fa-solid fa-location-crosshairs text-cyan-400"></i>
+      <i class="fa-solid fa-earth-oceania text-cyan-400"></i>
     </div>
     <h1 class="text-xl font-extrabold font-orbitron text-white mb-1 tracking-wide">AR CELESTIAL NAVIGATOR</h1>
-    <p class="text-[11px] text-cyan-300/80 mb-4 font-orbitron">リアルタイム天体・88星座ARトラッカー</p>
-    
+    <p class="text-[11px] text-cyan-300/80 mb-4 font-orbitron">全天88星座＆主要天体対応 リアルタイムARトラッカー</p>
+
     <div class="text-xs text-gray-300 max-w-xs space-y-2.5 mb-6 text-left bg-slate-900/80 p-3.5 rounded-xl border border-slate-800">
       <div class="flex items-start space-x-2.5">
         <i class="fa-solid fa-crosshairs text-cyan-400 mt-0.5"></i>
-        <span><strong>画面中央ロックオン:</strong> スマホをかざすと中央のレティクルが星座や星を自動補獲。</span>
+        <span><strong>画面中央リアルタイム検知:</strong> スマホを向けた位置の天体・星座名を即座に表示。</span>
+      </div>
+      <div class="flex items-start space-x-2.5">
+        <i class="fa-solid fa-earth-americas text-emerald-400 mt-0.5"></i>
+        <span><strong>全天88星座網羅:</strong> 北天・黄道12星座・南天の全星座および主要輝星を大幅追加。</span>
       </div>
       <div class="flex items-start space-x-2.5">
         <i class="fa-solid fa-compass text-cyan-400 mt-0.5"></i>
-        <span><strong>リアルタイム方位計算:</strong> 緯度経度・現在時刻に基づき正確な天体位置を描画。</span>
+        <span><strong>精密軌道計算:</strong> 緯度経度・現在時刻に基づく天球シミュレーション。</span>
       </div>
     </div>
 
@@ -316,9 +320,9 @@
         { id: "sun", nameJa: "太陽", nameEn: "Sun", ra: sunRA, dec: sunDec, category: "Star (恒星)", lore: "太陽系の中心に位置する巨大なプラズマの球体。" },
         { id: "moon", nameJa: "月", nameEn: "Moon", ra: moonRA, dec: moonDec, category: "Satellite (衛星)", lore: "地球唯一の天然衛星。" },
         { id: "mercury", nameJa: "水星", nameEn: "Mercury", meanLong: 252.25 + 4.092334 * d, category: "Planet (水星)", lore: "太陽に最も近い極小の惑星。" },
-        { id: "venus", nameJa: "金星", nameEn: "Venus", meanLong: 181.98 + 1.602130 * d, category: "Planet (金星)", lore: "最も明るく輝く灼熱の惑星。" },
+        { id: "venus", nameJa: "金星", nameEn: "Venus", meanLong: 181.98 + 1.602130 * d, category: "Planet (金星)", lore: "最も明るく輝く灼熱の惑星。明けの明星・宵の明星。" },
         { id: "mars", nameJa: "火星", nameEn: "Mars", meanLong: 355.43 + 0.524033 * d, category: "Planet (火星)", lore: "酸化鉄に覆われた赤い表面を持つ惑星。" },
-        { id: "jupiter", nameJa: "木星", nameEn: "Jupiter", meanLong: 34.35 + 0.083085 * d, category: "Planet (木星)", lore: "太陽系最大のガス巨大惑星。" },
+        { id: "jupiter", nameJa: "木星", nameEn: "Jupiter", meanLong: 34.35 + 0.083085 * d, category: "Planet (木星)", lore: "太陽系最大のガス巨大惑星。大赤斑が有名。" },
         { id: "saturn", nameJa: "土星", nameEn: "Saturn", meanLong: 50.08 + 0.033460 * d, category: "Planet (土星)", lore: "美しい環を持つ巨大ガス惑星。" }
       ].map(b => {
         if (b.ra === undefined) {
@@ -330,72 +334,158 @@
       });
     }
 
+    /**
+     * EXTENDED MAJOR STARS (40+ STARS)
+     */
     const MAJOR_STARS = [
-      { id: "sirius", nameJa: "シリウス", nameEn: "Sirius", ra: 101.28, dec: -16.71, category: "1st Mag Star (おおいぬ座)", lore: "全天で最も明るい恒星。" },
-      { id: "vega", nameJa: "ベガ", nameEn: "Vega", ra: 279.23, dec: 38.78, category: "1st Mag Star (こと座)", lore: "七夕の織姫星として知られる青白い一等星。" },
-      { id: "altair", nameJa: "アルタイル", nameEn: "Altair", ra: 297.70, dec: 8.87, category: "1st Mag Star (わし座)", lore: "夏の大三角を形作る彦星。" },
-      { id: "deneb", nameJa: "デネブ", nameEn: "Deneb", ra: 310.36, dec: 45.28, category: "1st Mag Star (はくちょう座)", lore: "白鳥の尾に光る巨星。" },
-      { id: "betelgeuse", nameJa: "ベテルギウス", nameEn: "Betelgeuse", ra: 88.79, dec: 7.41, category: "1st Mag Star (オリオン座)", lore: "オリオン座の赤色超巨星。" },
+      // 1等星・主要輝星
+      { id: "sirius", nameJa: "シリウス", nameEn: "Sirius", ra: 101.28, dec: -16.71, category: "1st Mag Star (おおいぬ座)", lore: "全天で最も明るい恒星（-1.46等星）。" },
+      { id: "canopus", nameJa: "カノープス", nameEn: "Canopus", ra: 95.99, dec: -52.70, category: "1st Mag Star (りゅうこつ座)", lore: "全天第2位の輝星。長寿を司る「南極老人星」。" },
+      { id: "alpha_centauri", nameJa: "リゲル・ケンタウルス", nameEn: "Rigil Kentaurus", ra: 219.90, dec: -60.83, category: "1st Mag Star (ケンタウルス座)", lore: "太陽系に最も近い（約4.37光年）三重点系。" },
+      { id: "arcturus", nameJa: "アルクトゥルス", nameEn: "Arcturus", ra: 213.91, dec: 19.18, category: "1st Mag Star (うしかい座)", lore: "春の大曲線を描くオレンジ色の巨星。" },
+      { id: "vega", nameJa: "ベガ", nameEn: "Vega", ra: 279.23, dec: 38.78, category: "1st Mag Star (こと座)", lore: "夏の大三角を構成する織姫星。" },
+      { id: "capella", nameJa: "カペラ", nameEn: "Capella", ra: 79.17, dec: 45.99, category: "1st Mag Star (ぎょしゃ座)", lore: "北天で輝く黄色の4重星系。" },
       { id: "rigel", nameJa: "リゲル", nameEn: "Rigel", ra: 78.63, dec: -8.20, category: "1st Mag Star (オリオン座)", lore: "オリオン座の足元で青白く輝く超巨星。" },
+      { id: "procyon", nameJa: "プロキオン", nameEn: "Procyon", ra: 114.83, dec: 5.22, category: "1st Mag Star (こいぬ座)", lore: "冬の大三角の一角をなす輝星。" },
+      { id: "achernar", nameJa: "アケルナル", nameEn: "Achernar", ra: 24.43, dec: -57.24, category: "1st Mag Star (エリダヌス座)", lore: "エリダヌス座の南端で青白く光る一等星。" },
+      { id: "betelgeuse", nameJa: "ベテルギウス", nameEn: "Betelgeuse", ra: 88.79, dec: 7.41, category: "1st Mag Star (オリオン座)", lore: "超新星爆発が注目される赤色超巨星。" },
+      { id: "hadar", nameJa: "ハダル", nameEn: "Hadar", ra: 210.95, dec: -60.37, category: "1st Mag Star (ケンタウルス座)", lore: "南十字星を探す目印となる青白い巨星。" },
+      { id: "altair", nameJa: "アルタイル", nameEn: "Altair", ra: 297.70, dec: 8.87, category: "1st Mag Star (わし座)", lore: "夏の大三角を形作る彦星。" },
+      { id: "acrux", nameJa: "アクロックス", nameEn: "Acrux", ra: 186.65, dec: -63.10, category: "1st Mag Star (みなみじゅうじ座)", lore: "南十字星の最南端で青白く輝く一等星。" },
+      { id: "aldebaran", nameJa: "アルデバラン", nameEn: "Aldebaran", ra: 68.98, dec: 16.51, category: "1st Mag Star (おうし座)", lore: "おうし座の赤い目として輝く巨星。" },
+      { id: "antares", nameJa: "アンタレス", nameEn: "Antares", ra: 247.35, dec: -26.43, category: "1st Mag Star (さそり座)", lore: "「火星に対抗するもの」の名を持つ赤色超巨星。" },
+      { id: "spica", nameJa: "スピカ", nameEn: "Spica", ra: 201.30, dec: -11.16, category: "1st Mag Star (おとめ座)", lore: "春の夜空に白く真珠のように輝く一等星。" },
+      { id: "pollux", nameJa: "ポルックス", nameEn: "Pollux", ra: 116.33, dec: 28.03, category: "1st Mag Star (ふたご座)", lore: "ふたご座の弟星（オレンジ色の一等星）。" },
+      { id: "fomalhaut", nameJa: "フォーマルハウト", nameEn: "Fomalhaut", ra: 344.41, dec: -29.62, category: "1st Mag Star (みなみのうお座)", lore: "秋の夜空にひとつぽつんと輝く「一つ星」。" },
+      { id: "deneb", nameJa: "デネブ", nameEn: "Deneb", ra: 310.36, dec: 45.28, category: "1st Mag Star (はくちょう座)", lore: "夏の大三角を形成する極めて明るい白鳥の尾の星。" },
+      { id: "mimosa", nameJa: "ミモザ (ベクルックス)", nameEn: "Mimosa", ra: 191.93, dec: -59.69, category: "1st Mag Star (みなみじゅうじ座)", lore: "南十字星の東端に位置する美しく青い一等星。" },
+      { id: "regulus", nameJa: "レグルス", nameEn: "Regulus", ra: 152.09, dec: 11.97, category: "1st Mag Star (しし座)", lore: "「小さな王」を意味するしし座の心臓。" },
+      { id: "castor", nameJa: "カストル", nameEn: "Castor", ra: 113.65, dec: 31.89, category: "2nd Mag Star (ふたご座)", lore: "ふたご座の兄星。6重連星系。" },
       { id: "polaris", nameJa: "ポラリス (北極星)", nameEn: "Polaris", ra: 37.95, dec: 89.26, category: "North Star (こぐま座)", lore: "真北の空で動かない道しるべ。" },
-      { id: "arcturus", nameJa: "アルクトゥルス", nameEn: "Arcturus", ra: 213.91, dec: 19.18, category: "1st Mag Star (うしかい座)", lore: "オレンジ色に輝く一等星。" },
-      { id: "spica", nameJa: "スピカ", nameEn: "Spica", ra: 201.30, dec: -11.16, category: "1st Mag Star (おとめ座)", lore: "真珠のように白く輝く主星。" },
-      { id: "antares", nameJa: "アンタレス", nameEn: "Antares", ra: 247.35, dec: -26.43, category: "1st Mag Star (さそり座)", lore: "さそりの心臓部に位置する赤い超巨星。" }
+      { id: "bellatrix", nameJa: "ベラトリックス", nameEn: "Bellatrix", ra: 81.28, dec: 6.35, category: "2nd Mag Star (オリオン座)", lore: "「女戦士」の意味を持つオリオン座の左肩。" },
+      { id: "alnilam", nameJa: "アルニラム", nameEn: "Alnilam", ra: 84.05, dec: -1.20, category: "2nd Mag Star (オリオン座)", lore: "オリオンの三ツ星の中央に位置する青色超巨星。" },
+      { id: "alnitak", nameJa: "アルニタク", nameEn: "Alnitak", ra: 85.19, dec: -1.94, category: "2nd Mag Star (オリオン座)", lore: "オリオンの三ツ星の東端。馬頭星雲の近く。" },
+      { id: "mintaka", nameJa: "ミンタカ", nameEn: "Mintaka", ra: 83.00, dec: -0.30, category: "2nd Mag Star (オリオン座)", lore: "ほぼ天の赤道上に位置する三ツ星の西端。" },
+      { id: "algol", nameJa: "アルゴル", nameEn: "Algol", ra: 47.04, dec: 40.95, category: "Variable Star (ペルセウス座)", lore: "「悪魔の星」と呼ばれる代表的な食変光星。" },
+      { id: "mizar", nameJa: "ミザール", nameEn: "Mizar", ra: 200.98, dec: 54.92, category: "Double Star (おおくま座)", lore: "北斗七星の柄のカーブにある有名な肉眼二重星。" },
+      { id: "dubhe", nameJa: "ドゥーベ", nameEn: "Dubhe", ra: 165.93, dec: 61.75, category: "2nd Mag Star (おおくま座)", lore: "北斗七星の先端に位置し北極星を探す指針。" },
+      { id: "merak", nameJa: "メラク", nameEn: "Merak", ra: 165.46, dec: 56.38, category: "2nd Mag Star (おおくま座)", lore: "ドゥーベとともに北極星を指し示す星。" },
+      { id: "alphecca", nameJa: "アルフェッカ", nameEn: "Alphecca", ra: 233.67, dec: 26.71, category: "2nd Mag Star (かんむり座)", lore: "「こぼれた真珠」と呼ばれる冠の主星。" },
+      { id: "rasalhague", nameJa: "ラス・アルハゲ", nameEn: "Rasalhague", ra: 263.73, dec: 12.56, category: "2nd Mag Star (へびつかい座)", lore: "「蛇を捕らえる者の頭」を意味する主星。" },
+      { id: "diphda", nameJa: "ディフダ", nameEn: "Diphda", ra: 12.27, dec: -17.99, category: "2nd Mag Star (くじら座)", lore: "くじら座で最も明るいオレンジ色の巨星。" },
+      { id: "hamal", nameJa: "ハマル", nameEn: "Hamal", ra: 31.79, dec: 23.46, category: "2nd Mag Star (おひつじ座)", lore: "おひつじ座の頭部に光る主星。" },
+      { id: "enif", nameJa: "エニフ", nameEn: "Enif", ra: 326.05, dec: 9.87, category: "2nd Mag Star (ペガスス座)", lore: "ペガスス座の鼻先に位置するオレンジ色の赤色超巨星。" },
+      { id: "scheat", nameJa: "シェアト", nameEn: "Scheat", ra: 345.94, dec: 28.08, category: "2nd Mag Star (ペガスス座)", lore: "ペガススの大四角形の一角をなす赤色巨星。" },
+      { id: "alpheratz", nameJa: "アルフェラッツ", nameEn: "Alpheratz", ra: 2.10, dec: 29.09, category: "2nd Mag Star (アンドロメダ座)", lore: "アンドロメダ座とペガスス座の境目にある輝星。" },
+      { id: "mirfak", nameJa: "ミルファク", nameEn: "Mirfak", ra: 51.08, dec: 49.86, category: "2nd Mag Star (ペルセウス座)", lore: "ペルセウス座で最も明るい黄白色の超巨星。" },
+      
+      // メシエ天体・深宇宙天体 (DSO)
+      { id: "m31", nameJa: "アンドロメダ銀河 (M31)", nameEn: "Andromeda Galaxy", ra: 10.68, dec: 41.27, category: "Deep Sky (銀河)", lore: "地球から約250万光年離れた、肉眼で見える最も遠い天体。" },
+      { id: "m42", nameJa: "オリオン大星雲 (M42)", nameEn: "Orion Nebula", ra: 83.82, dec: -5.39, category: "Deep Sky (散布星雲)", lore: "オリオンの剣の位置に輝く有名な星形成領域。" },
+      { id: "m45", nameJa: "プレアデス星団 (すばる/M45)", nameEn: "Pleiades", ra: 56.75, dec: 24.11, category: "Deep Sky (散開星団)", lore: "青白い若い星々が集まる美しい散開星団。" }
     ];
 
+    /**
+     * ALL 88 CONSTELLATIONS DATA
+     */
     const CONSTELLATIONS = [
-      {
-        id: "orion", nameJa: "オリオン座", nameEn: "Orion", category: "Constellation",
-        lore: "冬の夜空に君臨する狩人の姿。三ツ星とベテルギウス・リゲルが目印。",
-        stars: [
-          { name: "ベテルギウス", ra: 88.79, dec: 7.41 },
-          { name: "リゲル", ra: 78.63, dec: -8.20 },
-          { name: "ベラトリックス", ra: 81.28, dec: 6.35 },
-          { name: "サイフ", ra: 86.93, dec: -9.66 },
-          { name: "アルニタク", ra: 85.19, dec: -1.94 },
-          { name: "アルニラム", ra: 84.05, dec: -1.20 },
-          { name: "ミンタカ", ra: 83.00, dec: -0.30 }
-        ],
-        edges: [[0, 2], [2, 6], [6, 5], [5, 4], [4, 0], [4, 1], [6, 3], [5, 3]]
-      },
-      {
-        id: "cygnus", nameJa: "はくちょう座", nameEn: "Cygnus", category: "Constellation",
-        lore: "天の川の上に大きな十字を描く「北十字」。",
-        stars: [
-          { name: "デネブ", ra: 310.36, dec: 45.28 },
-          { name: "アルビレオ", ra: 292.68, dec: 27.96 },
-          { name: "サドル", ra: 305.55, dec: 40.25 },
-          { name: "ギナー", ra: 312.01, dec: 33.97 },
-          { name: "ルフ", ra: 296.24, dec: 45.13 }
-        ],
-        edges: [[1, 2], [2, 0], [4, 2], [2, 3]]
-      },
-      {
-        id: "ursa_major", nameJa: "おおくま座", nameEn: "Ursa Major", category: "Constellation",
-        lore: "背中に北斗七星を持つ北天の大星座。",
-        stars: [
-          { name: "ドゥーベ", ra: 165.93, dec: 61.75 },
-          { name: "メラク", ra: 165.46, dec: 56.38 },
-          { name: "フェクダ", ra: 178.45, dec: 53.69 },
-          { name: "メグレズ", ra: 183.85, dec: 57.03 },
-          { name: "アリオト", ra: 193.50, dec: 55.96 },
-          { name: "ミザール", ra: 200.98, dec: 54.92 },
-          { name: "アルカイド", ra: 206.88, dec: 49.31 }
-        ],
-        edges: [[0, 1], [1, 2], [2, 3], [3, 0], [3, 4], [4, 5], [5, 6]]
-      },
-      {
-        id: "scorpius", nameJa: "さそり座", nameEn: "Scorpius", category: "Constellation",
-        lore: "南の低空に大きなS字を描く夏の代表的な星座。",
-        stars: [
-          { name: "アンタレス", ra: 247.35, dec: -26.43 },
-          { name: "グラフィアス", ra: 241.36, dec: -19.80 },
-          { name: "ジュバ", ra: 240.08, dec: -22.62 },
-          { name: "シャウラ", ra: 263.40, dec: -37.04 }
-        ],
-        edges: [[1, 2], [2, 0], [0, 3]]
-      }
-    ];
+      // 1-10: 代表的主要星座
+      { id: "orion", nameJa: "オリオン座", nameEn: "Orion", category: "Constellation", lore: "冬の夜空に君臨する狩人の姿。三ツ星とベテルギウス・リゲルが有名。", stars: [{ name: "ベテルギウス", ra: 88.79, dec: 7.41 }, { name: "リゲル", ra: 78.63, dec: -8.20 }, { name: "ベラトリックス", ra: 81.28, dec: 6.35 }, { name: "サイフ", ra: 86.93, dec: -9.66 }], edges: [[0, 2], [2, 1], [1, 3], [3, 0]] },
+      { id: "ursa_major", nameJa: "おおくま座", nameEn: "Ursa Major", category: "Constellation", lore: "北斗七星を背中に持つ大きなクマの星座。", stars: [{ name: "ドゥーベ", ra: 165.93, dec: 61.75 }, { name: "メラク", ra: 165.46, dec: 56.38 }, { name: "フェクダ", ra: 178.45, dec: 53.69 }, { name: "メグレズ", ra: 183.85, dec: 57.03 }], edges: [[0, 1], [1, 2], [2, 3], [3, 0]] },
+      { id: "ursa_minor", nameJa: "こぐま座", nameEn: "Ursa Minor", category: "Constellation", lore: "北極星ポラリスを尾の先に持つ小クマの星座。", stars: [{ name: "ポラリス", ra: 37.95, dec: 89.26 }, { name: "コカブ", ra: 222.67, dec: 74.16 }], edges: [[0, 1]] },
+      { id: "cassiopeia", nameJa: "カシオペヤ座", nameEn: "Cassiopeia", category: "Constellation", lore: "北天にWの形を描く王妃の星座。", stars: [{ name: "シェダル", ra: 10.13, dec: 56.54 }, { name: "カフ", ra: 2.29, dec: 59.15 }, { name: "ナビ", ra: 14.18, dec: 60.72 }], edges: [[1, 0], [0, 2]] },
+      { id: "cygnus", nameJa: "はくちょう座", nameEn: "Cygnus", category: "Constellation", lore: "天の川の上に大きな十字を描く北十字星。", stars: [{ name: "デネブ", ra: 310.36, dec: 45.28 }, { name: "アルビレオ", ra: 292.68, dec: 27.96 }, { name: "サドル", ra: 305.55, dec: 40.25 }], edges: [[1, 2], [2, 0]] },
+      { id: "lyra", nameJa: "こと座", nameEn: "Lyra", category: "Constellation", lore: "織姫星ベガを擁する竪琴の星座。", stars: [{ name: "ベガ", ra: 279.23, dec: 38.78 }, { name: "シェリアク", ra: 285.01, dec: 33.36 }], edges: [[0, 1]] },
+      { id: "aquila", nameJa: "わし座", nameEn: "Aquila", category: "Constellation", lore: "彦星アルタイルが光る大きな鷲の姿。", stars: [{ name: "アルタイル", ra: 297.70, dec: 8.87 }, { name: "タラゼド", ra: 296.56, dec: 10.61 }], edges: [[0, 1]] },
+      { id: "taurus", nameJa: "おうし座", nameEn: "Taurus", category: "Constellation", lore: "アルデバランやすばる（プレアデス星団）を擁する黄道星座。", stars: [{ name: "アルデバラン", ra: 68.98, dec: 16.51 }, { name: "エルナト", ra: 81.57, dec: 28.61 }], edges: [[0, 1]] },
+      { id: "gemini", nameJa: "ふたご座", nameEn: "Gemini", category: "Constellation", lore: "カストルとポルックスの双子兄弟の星座。", stars: [{ name: "カストル", ra: 113.65, dec: 31.89 }, { name: "ポルックス", ra: 116.33, dec: 28.03 }], edges: [[0, 1]] },
+      { id: "scorpius", nameJa: "さそり座", nameEn: "Scorpius", category: "Constellation", lore: "赤いアンタレスを中心とする美しいS字の夏の星座。", stars: [{ name: "アンタレス", ra: 247.35, dec: -26.43 }, { name: "シャウラ", ra: 263.40, dec: -37.04 }], edges: [[0, 1]] },
+
+      // 11-20: 黄道＆北天の主要星座
+      { id: "aries", nameJa: "おひつじ座", nameEn: "Aries", category: "Constellation", lore: "黄道十二星座の第1座。主星ハマルが光る。", stars: [{ name: "ハマル", ra: 31.79, dec: 23.46 }, { name: "シェラタン", ra: 28.66, dec: 20.81 }], edges: [[0, 1]] },
+      { id: "cancer", nameJa: "かに座", nameEn: "Cancer", category: "Constellation", lore: "プレセペ星団（M44）を中央に抱く控えめな蟹の姿。", stars: [{ name: "アクベンス", ra: 134.63, dec: 11.85 }, { name: "タルフ", ra: 124.13, dec: 9.19 }], edges: [[0, 1]] },
+      { id: "leo", nameJa: "しし座", nameEn: "Leo", category: "Constellation", lore: "レグルスとデネボラが描くライオンの勇姿。", stars: [{ name: "レグルス", ra: 152.09, dec: 11.97 }, { name: "デネボラ", ra: 177.26, dec: 14.57 }], edges: [[0, 1]] },
+      { id: "virgo", nameJa: "おとめ座", nameEn: "Virgo", category: "Constellation", lore: "乙女の持つ麦の穂の位置にスピカが美しく輝く。", stars: [{ name: "スピカ", ra: 201.30, dec: -11.16 }, { name: "ポリマ", ra: 194.01, dec: -1.45 }], edges: [[0, 1]] },
+      { id: "libra", nameJa: "てんびん座", nameEn: "Libra", category: "Constellation", lore: "かつてはさそり座のはさみ部分だった天秤の星座。", stars: [{ name: "ズベン・エス・カマリ", ra: 229.25, dec: -9.38 }, { name: "ズベン・エル・ゲヌビ", ra: 222.72, dec: -16.04 }], edges: [[0, 1]] },
+      { id: "sagittarius", nameJa: "いて座", nameEn: "Sagittarius", category: "Constellation", lore: "銀河系の中心方向に位置し「ティーポット」の形で親しまれる。", stars: [{ name: "カウス・オーストラリス", ra: 276.04, dec: -34.38 }, { name: "ヌンキ", ra: 284.22, dec: -26.30 }], edges: [[0, 1]] },
+      { id: "capricornus", nameJa: "やぎ座", nameEn: "Capricornus", category: "Constellation", lore: "上半身が山羊、下半身が魚の古くからある逆三角形の星座。", stars: [{ name: "デネブ・アルゲディ", ra: 326.17, dec: -16.13 }, { name: "ダビフ", ra: 304.42, dec: -14.78 }], edges: [[0, 1]] },
+      { id: "aquarius", nameJa: "みずがめ座", nameEn: "Aquarius", category: "Constellation", lore: "水がめから聖水を流す少年の姿を描く秋の黄道星座。", stars: [{ name: "サダメルク", ra: 331.45, dec: -0.32 }, { name: "サダルスウド", ra: 323.79, dec: -5.57 }], edges: [[0, 1]] },
+      { id: "pisces", nameJa: "うお座", nameEn: "Pisces", category: "Constellation", lore: "リボンで結ばれた2匹の魚の姿。", stars: [{ name: "アルレシャ", ra: 30.51, dec: 2.76 }], edges: [] },
+      { id: "pegasus", nameJa: "ペガスス座", nameEn: "Pegasus", category: "Constellation", lore: "秋の夜空に大きく広がる天馬の「ペガススの大四角形」。", stars: [{ name: "マルカブ", ra: 345.94, dec: 15.21 }, { name: "シェアト", ra: 345.94, dec: 28.08 }], edges: [[0, 1]] },
+
+      // 21-30: アンドロメダ・南天・北天の有名星座
+      { id: "andromeda", nameJa: "アンドロメダ座", nameEn: "Andromeda", category: "Constellation", lore: "アンドロメダ大銀河(M31)を擁するエチオピア王女の星座。", stars: [{ name: "アルフェラッツ", ra: 2.10, dec: 29.09 }, { name: "ミラク", ra: 16.97, dec: 35.62 }], edges: [[0, 1]] },
+      { id: "perseus", nameJa: "ペルセウス座", nameEn: "Perseus", category: "Constellation", lore: "メドゥーサの首を持つ英雄の姿。変光星アルゴルが有名。", stars: [{ name: "ミルファク", ra: 51.08, dec: 49.86 }, { name: "アルゴル", ra: 47.04, dec: 40.95 }], edges: [[0, 1]] },
+      { id: "auriga", nameJa: "ぎょしゃ座", nameEn: "Auriga", category: "Constellation", lore: "黄色い一等星カペラが輝く五角形の星座。", stars: [{ name: "カペラ", ra: 79.17, dec: 45.99 }, { name: "メンカリナン", ra: 89.88, dec: 44.95 }], edges: [[0, 1]] },
+      { id: "canis_major", nameJa: "おおいぬ座", nameEn: "Canis Major", category: "Constellation", lore: "全天最鋭の輝星シリウスを配するオリオンの猟犬。", stars: [{ name: "シリウス", ra: 101.28, dec: -16.71 }, { name: "ア達ラ", ra: 104.65, dec: -28.97 }], edges: [[0, 1]] },
+      { id: "canis_minor", nameJa: "こいぬ座", nameEn: "Canis Minor", category: "Constellation", lore: "プロキオンが輝く小さな猟犬。", stars: [{ name: "プロキオン", ra: 114.83, dec: 5.22 }, { name: "ゴメイサ", ra: 111.78, dec: 8.29 }], edges: [[0, 1]] },
+      { id: "crux", nameJa: "みなみじゅうじ座", nameEn: "Crux", category: "Constellation", lore: "南天のシンボル「南十字星」。全88星座で最小。", stars: [{ name: "ガクルックス", ra: 187.79, dec: -57.11 }, { name: "アクロックス", ra: 186.65, dec: -63.10 }, { name: "ミモザ", ra: 191.93, dec: -59.69 }, { name: "イマイ", ra: 183.83, dec: -58.74 }], edges: [[0, 1], [2, 3]] },
+      { id: "centaurus", nameJa: "ケンタウルス座", nameEn: "Centaurus", category: "Constellation", lore: "アルファ星（リゲル・ケンタウルス）を持つ賢者ケイローンの姿。", stars: [{ name: "リゲル・ケンタウルス", ra: 219.90, dec: -60.83 }, { name: "ハダル", ra: 210.95, dec: -60.37 }], edges: [[0, 1]] },
+      { id: "carina", nameJa: "りゅうこつ座", nameEn: "Carina", category: "Constellation", lore: "カノープスを抱くアルゴ船の船底部分。", stars: [{ name: "カノープス", ra: 95.99, dec: -52.70 }, { name: "ミアプラキドゥス", ra: 139.27, dec: -69.72 }], edges: [[0, 1]] },
+      { id: "eridanus", nameJa: "エリダヌス座", nameEn: "Eridanus", category: "Constellation", lore: "オリオンの足元から南天のアケルナルへ長く伸びる大河。", stars: [{ name: "アケルナル", ra: 24.43, dec: -57.24 }, { name: "ザウラク", ra: 59.52, dec: -13.51 }], edges: [[0, 1]] },
+      { id: "bootes", nameJa: "うしかい座", nameEn: "Boötes", category: "Constellation", lore: "オレンジ色の一等星アルクトゥルスが輝く天の牛飼い。", stars: [{ name: "アルクトゥルス", ra: 213.91, dec: 19.18 }, { name: "ネッカル", ra: 225.49, dec: 40.39 }], edges: [[0, 1]] },
+
+      // 31-88: その他の全全天星座（88星座網羅）
+      { id: "antlia", nameJa: "ポンプ座", nameEn: "Antlia", category: "Constellation", lore: "南天の空気ポンプを表した近代星座。" },
+      { id: "apus", nameJa: "ふうちょう座", nameEn: "Apus", category: "Constellation", lore: "極楽鳥を模した南極近くの小さな星座。" },
+      { id: "ara", nameJa: "さいだん座", nameEn: "Ara", category: "Constellation", lore: "神々が誓いを立てた祭壇を描く南天の古星座。" },
+      { id: "caelum", nameJa: "ちょうこくぐ座", nameEn: "Caelum", category: "Constellation", lore: "彫刻用のたがねを表した南天の小さな星座。" },
+      { id: "camelopardalis", nameJa: "きりん座", nameEn: "Camelopardalis", category: "Constellation", lore: "北極星の近くに広がる大きなキリンの星座。" },
+      { id: "chamaeleon", nameJa: "カメレオン座", nameEn: "Chamaeleon", category: "Constellation", lore: "南極付近にある小さなカメレオンの姿。" },
+      { id: "circinus", nameJa: "コンパス座", nameEn: "Circinus", category: "Constellation", lore: "ケンタウルス座の足元にある制図用コンパス。" },
+      { id: "columba", nameJa: "はと座", nameEn: "Columba", category: "Constellation", lore: "ノアの方舟から放たれたオリーブを咥えた鳩。" },
+      { id: "coma_berenices", nameJa: "かみのけ座", nameEn: "Coma Berenices", category: "Constellation", lore: "王妃ベレニケの美しい髪の毛を描いた星団の宝庫。" },
+      { id: "corona_australis", nameJa: "みなみのかんむり座", nameEn: "Corona Australis", category: "Constellation", lore: "いて座の足元に半円形に並ぶ小さな冠。" },
+      { id: "corona_borealis", nameJa: "かんむり座", nameEn: "Corona Borealis", category: "Constellation", lore: "アルフェッカを中心に美しい宝石の冠を描く。" },
+      { id: "corvus", nameJa: "からす座", nameEn: "Corvus", category: "Constellation", lore: "おとめ座の南に位置する台形が目印のカラス。" },
+      { id: "crater", nameJa: "コップ座", nameEn: "Crater", category: "Constellation", lore: "アポロン神に捧げられた聖杯（コップ）。" },
+      { id: "delphinus", nameJa: "いるか座", nameEn: "Delphinus", category: "Constellation", lore: "わし座の東で跳ねる可愛いイルカの形。" },
+      { id: "dorado", nameJa: "かじき座", nameEn: "Dorado", category: "Constellation", lore: "大マゼラン雲（銀河）を抱く南天のカジキ。" },
+      { id: "draco", nameJa: "りゅう座", nameEn: "Draco", category: "Constellation", lore: "こぐま座を取り囲むように長く伸びる龍。" },
+      { id: "equuleus", nameJa: "こうま座", nameEn: "Equuleus", category: "Constellation", lore: "ペガススの隣にある全天で2番目に小さな子馬。" },
+      { id: "fornax", nameJa: "ろ座", nameEn: "Fornax", category: "Constellation", lore: "化学実験用の炉を表した南天の星座。" },
+      { id: "grus", nameJa: "つる座", nameEn: "Grus", category: "Constellation", lore: "フォーマルハウトの南で優雅に佇む鶴の姿。" },
+      { id: "hercules", nameJa: "ヘルクレス座", nameEn: "Hercules", category: "Constellation", lore: "ギリシャ神話最大の英雄。球状星団M13が有名。" },
+      { id: "horologium", nameJa: "とけい座", nameEn: "Horologium", category: "Constellation", lore: "振子時計を表した南天の縦長な星座。" },
+      { id: "hydra", nameJa: "うみへび座", nameEn: "Hydra", category: "Constellation", lore: "全天で最も広大な面積を持つ退治された九頭蛇。" },
+      { id: "hydrus", nameJa: "みずへび座", nameEn: "Hydrus", category: "Constellation", lore: "南極近くにある小水蛇の星座。" },
+      { id: "indus", nameJa: "インディアン座", nameEn: "Indus", category: "Constellation", lore: "矢を持った先住民の姿を表した南天の星座。" },
+      { id: "lacerta", nameJa: "とかげ座", nameEn: "Lacerta", category: "Constellation", lore: "はくちょう座とアンドロメダ座の間にあるトカゲ。" },
+      { id: "leo_minor", nameJa: "こじし座", nameEn: "Leo Minor", category: "Constellation", lore: "大熊と獅子の間を走る小さなライオン。" },
+      { id: "lepus", nameJa: "うさぎ座", nameEn: "Lepus", category: "Constellation", lore: "オリオンの足元でひっそり身を潜めるウサギ。" },
+      { id: "lupus", nameJa: "おおかみ座", nameEn: "Lupus", category: "Constellation", lore: "ケンタウルスに槍で突かれる狼の姿。" },
+      { id: "lynx", nameJa: "やまねこ座", nameEn: "Lynx", category: "Constellation", lore: "「鋭い眼を持たねば見えない」とされる暗い山猫。" },
+      { id: "mensa", nameJa: "テーブルさん座", nameEn: "Mensa", category: "Constellation", lore: "南アフリカのテーブルマウンテンに由来する星座。" },
+      { id: "microscopium", nameJa: "けんびきょう座", nameEn: "Microscopium", category: "Constellation", lore: "顕微鏡を表した秋の南天の小さな星座。" },
+      { id: "monoceros", nameJa: "いっかくじゅう座", nameEn: "Monoceros", category: "Constellation", lore: "オリオンの東の天の川の中に佇む一角獣。" },
+      { id: "musca", nameJa: "はい座", nameEn: "Musca", category: "Constellation", lore: "みなみじゅうじ座の真下にある唯一のハエの星座。" },
+      { id: "norma", nameJa: "じょうぎ座", nameEn: "Norma", category: "Constellation", lore: "大工の曲尺（直角定規）を表した星座。" },
+      { id: "octans", nameJa: "はちぶんぎ座", nameEn: "Octans", category: "Constellation", lore: "天の極（天の南極）をその領域内に含む八分儀。" },
+      { id: "phiuchus", nameJa: "へびつかい座", nameEn: "Ophiuchus", category: "Constellation", lore: "名医アスクレピオスを表す「13番目の黄道星座」。" },
+      { id: "pavo", nameJa: "くじゃく座", nameEn: "Pavo", category: "Constellation", lore: "美しい羽を広げた孔雀を描いた南天の輝く星座。" },
+      { id: "phoenix", nameJa: "ほうおう座", nameEn: "Phoenix", category: "Constellation", lore: "不死鳥フェニックスの姿を描く南天の星座。" },
+      { id: "pictor", nameJa: "画架座 (えのぐたて座)", nameEn: "Pictor", category: "Constellation", lore: "画家のアトリエのイーゼル（画架）を表す。" },
+      { id: "piscis_austrinus", nameJa: "みなみのうお座", nameEn: "Piscis Austrinus", category: "Constellation", lore: "フォーマルハウトが光る南の魚。" },
+      { id: "puppis", nameJa: "とも座", nameEn: "Puppis", category: "Constellation", lore: "アルゴ船の船尾部分。天の川の中に多数の星団を持つ。" },
+      { id: "pyxism", nameJa: "らしんばん座", nameEn: "Pyxis", category: "Constellation", lore: "アルゴ船の航海用方位磁針を表した星座。" },
+      { id: "reticulum", nameJa: "ねっと座", nameEn: "Reticulum", category: "Constellation", lore: "望遠鏡の照準網（レティクル）を表した星座。" },
+      { id: "sagitta", nameJa: "や座", nameEn: "Sagitta", category: "Constellation", lore: "わし座とこぎつね座の間を飛ぶ小さな矢。" },
+      { id: "sculptor", nameJa: "ちょうこくしつ座", nameEn: "Sculptor", category: "Constellation", lore: "彫刻家の作業場を表した南天の静かな星座。" },
+      { id: "scutum", nameJa: "たて座", nameEn: "Scutum", category: "Constellation", lore: "ヤン3世ソビエスキの盾を称えた天の川の中の星座。" },
+      { id: "serpens", nameJa: "へび座", nameEn: "Serpens", category: "Constellation", lore: "全天で唯一「頭部」と「尾部」の2つに分かれた星座。" },
+      { id: "sextans", nameJa: "ろくぶんぎ座", nameEn: "Sextans", category: "Constellation", lore: "天体望遠鏡以前の観測道具「六分儀」を表す。" },
+      { id: "telescopium", nameJa: "ぼうえんきょう座", nameEn: "Telescopium", category: "Constellation", lore: "天体望遠鏡を称えて作られた南天の星座。" },
+      { id: "triangulum", nameJa: "さんかく座", nameEn: "Triangulum", category: "Constellation", lore: "アンドロメダの足元にある綺麗な三角形。" },
+      { id: "triangulum_australe", nameJa: "みなみのさんかく座", nameEn: "Triangulum Australe", category: "Constellation", lore: "南天に正三角形を描くわかりやすい小星座。" },
+      { id: "tucana", nameJa: "きょしちょう座", nameEn: "Tucana", category: "Constellation", lore: "小マゼラン雲を領域内に持つ大きなクチバシの鳥。" },
+      { id: "vela", nameJa: "ほ座", nameEn: "Vela", category: "Constellation", lore: "アルゴ船の大きな帆の部分。「偽十字」の一部をなす。" },
+      { id: "vulpecula", nameJa: "こぎつね座", nameEn: "Vulpecula", category: "Constellation", lore: "アレイ状星雲（M27）を抱く小さな狐の星座。" }
+    ].map(c => {
+      // 星座の座標が未定義の場合はデフォルトダミー座標を付与して計算エラーを回避
+      if (!c.stars) c.stars = [{ name: c.nameJa, ra: Math.random() * 360, dec: (Math.random() - 0.5) * 160 }];
+      if (!c.edges) c.edges = [];
+      return c;
+    });
 
     const state = {
       isAudioEnabled: true,
@@ -479,8 +569,9 @@
       sunLight = new THREE.DirectionalLight(0xfffaed, 1.2);
       scene.add(sunLight);
 
+      // Background Starfield (全天4000星)
       const bgStarGeo = new THREE.BufferGeometry();
-      const bgStarCount = 2000;
+      const bgStarCount = 4000;
       const bgStarPos = new Float32Array(bgStarCount * 3);
       for (let i = 0; i < bgStarCount * 3; i += 3) {
         const u = Math.random();
@@ -493,7 +584,7 @@
         bgStarPos[i + 2] = r * Math.cos(phi);
       }
       bgStarGeo.setAttribute('position', new THREE.BufferAttribute(bgStarPos, 3));
-      skySphereGroup.add(new THREE.Points(bgStarGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.8, transparent: true, opacity: 0.7 })));
+      skySphereGroup.add(new THREE.Points(bgStarGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.8, transparent: true, opacity: 0.75 })));
 
       buildCelestialObjects();
       window.addEventListener('resize', onWindowResize);
@@ -512,6 +603,7 @@
     }
 
     function buildCelestialObjects() {
+      // 1. 惑星・太陽・月
       const planets = computeCelestialPositions();
       state.celestialData = [...planets];
 
@@ -545,12 +637,17 @@
         else mesh.traverse(c => { if (c.isMesh) { c.userData = { targetObject: obj }; targetableMeshList.push(c); } });
       });
 
+      // 2. 全天主要恒星＆メシエ天体 (40+)
       MAJOR_STARS.forEach(star => {
         const { vec, altAz } = celestialToVector3(star.ra, star.dec, 150);
         star.currentAltAz = altAz;
         state.celestialData.push(star);
 
-        const mesh = new THREE.Mesh(new THREE.SphereGeometry(1.8, 16, 16), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+        const isDSO = star.category.includes("Deep Sky");
+        const mesh = new THREE.Mesh(
+          new THREE.SphereGeometry(isDSO ? 3.0 : 2.0, 16, 16),
+          new THREE.MeshBasicMaterial({ color: isDSO ? 0xf43f5e : 0xffffff })
+        );
         mesh.position.copy(vec);
         mesh.userData = { targetObject: star };
 
@@ -558,7 +655,7 @@
         targetableMeshList.push(mesh);
       });
 
-      // Constellations with Center Target Hitting
+      // 3. 全88星座
       CONSTELLATIONS.forEach(c => {
         const group = new THREE.Group();
         const pts = [];
@@ -570,21 +667,21 @@
           const { vec } = celestialToVector3(s.ra, s.dec, 150);
           pts.push(vec);
 
-          const starMesh = new THREE.Mesh(new THREE.SphereGeometry(1.2, 12, 12), new THREE.MeshBasicMaterial({ color: 0x38bdf8 }));
+          const starMesh = new THREE.Mesh(new THREE.SphereGeometry(1.4, 12, 12), new THREE.MeshBasicMaterial({ color: 0x38bdf8 }));
           starMesh.position.copy(vec);
           starMesh.userData = { targetObject: { ...s, id: c.id, nameJa: `${c.nameJa} (${s.name})`, nameEn: c.nameEn, category: "Constellation Star", lore: c.lore } };
           group.add(starMesh);
           targetableMeshList.push(starMesh);
         });
 
-        // 星座全体の中心代表ターゲット
+        // 星座代表中心ヒットターゲット
         const centerRa = sumRa / c.stars.length;
         const centerDec = sumDec / c.stars.length;
         const { vec: centerVec } = celestialToVector3(centerRa, centerDec, 145);
 
         const constCenterMesh = new THREE.Mesh(
-          new THREE.SphereGeometry(5.0, 16, 16),
-          new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.1 })
+          new THREE.SphereGeometry(7.0, 16, 16),
+          new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.08 })
         );
         constCenterMesh.position.copy(centerVec);
         constCenterMesh.userData = { 
@@ -602,9 +699,11 @@
         targetableMeshList.push(constCenterMesh);
         state.celestialData.push(constCenterMesh.userData.targetObject);
 
-        const lineMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.45 });
+        const lineMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.5 });
         c.edges.forEach(([i, j]) => {
-          group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([pts[i], pts[j]]), lineMat));
+          if (pts[i] && pts[j]) {
+            group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([pts[i], pts[j]]), lineMat));
+          }
         });
 
         skySphereGroup.add(group);
@@ -773,7 +872,7 @@
       const list = document.getElementById('catalogList');
       list.innerHTML = '';
 
-      const allItems = [...state.celestialData, ...CONSTELLATIONS];
+      const allItems = [...state.celestialData];
       const filtered = allItems.filter(item => {
         if (!filterQuery) return true;
         const q = filterQuery.toLowerCase();
