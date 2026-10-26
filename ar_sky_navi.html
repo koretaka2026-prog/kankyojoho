@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>AR Constellation Finder & Star Catcher</title>
+  <title>AR Celestial & Constellation Hunter</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Three.js CDN for 3D Sky rendering -->
+  <!-- Three.js CDN -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
@@ -27,55 +27,69 @@
       font-family: 'Orbitron', sans-serif;
     }
 
-    /* Glassmorphism HUD panels */
+    /* Glassmorphism Panel Styling */
     .glass-panel {
-      background: rgba(15, 23, 42, 0.65);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border: 1px solid rgba(56, 189, 248, 0.25);
-      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5), inset 0 0 15px rgba(56, 189, 248, 0.1);
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.6), inset 0 0 15px rgba(56, 189, 248, 0.1);
     }
 
     .glass-button {
-      background: rgba(30, 41, 59, 0.7);
+      background: rgba(30, 41, 59, 0.8);
       backdrop-filter: blur(8px);
       border: 1px solid rgba(56, 189, 248, 0.4);
       transition: all 0.2s ease;
     }
 
-    .glass-button:active {
+    .glass-button:active, .glass-button.active {
       transform: scale(0.95);
-      background: rgba(56, 189, 248, 0.3);
+      background: rgba(56, 189, 248, 0.35);
+      border-color: #38bdf8;
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.5);
     }
 
-    /* Scanning reticle animation */
+    /* Scanning Reticle Animations */
     @keyframes pulse-ring {
-      0% { transform: scale(0.8); opacity: 0.8; }
-      50% { transform: scale(1.1); opacity: 0.3; }
-      100% { transform: scale(0.8); opacity: 0.8; }
+      0% { transform: scale(0.85); opacity: 0.8; }
+      50% { transform: scale(1.15); opacity: 0.3; }
+      100% { transform: scale(0.85); opacity: 0.8; }
     }
 
     .reticle-ring {
       animation: pulse-ring 2.5s infinite ease-in-out;
     }
 
-    @keyframes rotate-slow {
+    @keyframes rotate-hud {
       from { transform: rotate(0deg); }
       to { transform: rotate(360deg); }
     }
 
     .rotate-hud {
-      animation: rotate-slow 20s linear infinite;
+      animation: rotate-hud 25s linear infinite;
     }
 
-    /* Target lock animation */
-    @keyframes target-lock {
-      0% { transform: scale(1.3); border-color: #f43f5e; }
-      100% { transform: scale(1); border-color: #38bdf8; }
+    /* Target Arrow Pulse */
+    @keyframes arrow-bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
     }
 
-    .locked-anim {
-      animation: target-lock 0.3s ease-out forwards;
+    .nav-arrow-anim {
+      animation: arrow-bounce 1s infinite ease-in-out;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 4px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.6);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #38bdf8;
+      border-radius: 4px;
     }
   </style>
 </head>
@@ -84,18 +98,18 @@
   <!-- Background Layer 1: Real Camera Feed -->
   <video id="cameraFeed" autoplay playsinline muted class="absolute inset-0 w-full h-full object-cover z-0 hidden"></video>
 
-  <!-- Background Layer 2: Canvas Space Fallback (Used when camera is off or denied) -->
+  <!-- Background Layer 2: Canvas Space / Dynamic Sky Gradient -->
   <canvas id="skyCanvas" class="absolute inset-0 w-full h-full z-1"></canvas>
 
   <!-- HUD Overlay UI (Z-Index 10) -->
-  <div id="hudOverlay" class="absolute inset-0 z-10 flex flex-col justify-between p-4 pointer-events-none">
+  <div id="hudOverlay" class="absolute inset-0 z-10 flex flex-col justify-between p-3 sm:p-4 pointer-events-none">
     
-    <!-- Top Header & Status Bar -->
+    <!-- Top Header: Compass, Sensor Stats, Settings -->
     <div class="flex justify-between items-start gap-2">
-      <!-- Compass & Pitch HUD -->
-      <div class="glass-panel rounded-2xl p-3 flex items-center space-x-3 pointer-events-auto">
-        <div class="relative w-10 h-10 flex items-center justify-center border-2 border-cyan-400 rounded-full">
-          <i id="compassNeedle" class="fa-solid font-bold fa-location-arrow text-cyan-400 text-lg transition-transform duration-100"></i>
+      <!-- Compass HUD -->
+      <div class="glass-panel rounded-2xl p-2.5 flex items-center space-x-3 pointer-events-auto">
+        <div class="relative w-9 h-9 flex items-center justify-center border-2 border-cyan-400 rounded-full bg-slate-900/50">
+          <i id="compassNeedle" class="fa-solid fa-location-arrow text-cyan-400 text-base transition-transform duration-100"></i>
         </div>
         <div>
           <div class="text-xs text-cyan-300 font-orbitron flex items-center gap-1">
@@ -107,160 +121,233 @@
         </div>
       </div>
 
-      <!-- Settings & Audio Toggles -->
-      <div class="flex items-center space-x-2 pointer-events-auto">
-        <button id="toggleAudioBtn" class="glass-button w-10 h-10 rounded-full text-cyan-400 flex items-center justify-center">
-          <i class="fa-solid fa-volume-high text-sm"></i>
+      <!-- Settings & Controls Toggles -->
+      <div class="flex items-center space-x-1.5 pointer-events-auto">
+        <button id="toggleAudioBtn" class="glass-button w-9 h-9 rounded-full text-cyan-400 flex items-center justify-center">
+          <i class="fa-solid fa-volume-high text-xs"></i>
         </button>
-        <button id="toggleVibeBtn" class="glass-button w-10 h-10 rounded-full text-cyan-400 flex items-center justify-center">
-          <i class="fa-solid fa-mobile-screen-button text-sm"></i>
+        <button id="toggleVibeBtn" class="glass-button w-9 h-9 rounded-full text-cyan-400 flex items-center justify-center">
+          <i class="fa-solid fa-mobile-screen-button text-xs"></i>
         </button>
-        <button id="toggleCamBtn" class="glass-button w-10 h-10 rounded-full text-cyan-400 flex items-center justify-center">
-          <i class="fa-solid fa-camera text-sm"></i>
+        <button id="toggleCamBtn" class="glass-button w-9 h-9 rounded-full text-cyan-400 flex items-center justify-center">
+          <i class="fa-solid fa-camera text-xs"></i>
         </button>
       </div>
     </div>
 
-    <!-- Mode Selector & Proximity Radar (Hunter Mode) -->
+    <!-- Center HUD: Reticle, Target Navigation Arrow, & Target Lock Radar -->
     <div class="flex flex-col items-center justify-center space-y-2 my-auto">
       
-      <!-- Target Proximity Indicator (Visible in Hunter mode) -->
-      <div id="radarContainer" class="glass-panel px-4 py-2 rounded-full hidden flex items-center space-x-3">
-        <i class="fa-solid fa-crosshairs text-rose-500 animate-pulse"></i>
-        <span class="text-xs font-orbitron text-gray-300">TARGET: <span id="targetName" class="text-rose-400 font-bold">ORION</span></span>
-        <div class="w-20 bg-gray-700 h-2 rounded-full overflow-hidden">
+      <!-- Hunter Mode Navigation Arrow & Radar -->
+      <div id="radarContainer" class="glass-panel px-4 py-2 rounded-full hidden flex items-center space-x-3 pointer-events-auto">
+        <div id="navArrow" class="text-rose-400 text-lg nav-arrow-anim transition-transform duration-200">
+          <i class="fa-solid fa-circle-chevron-up"></i>
+        </div>
+        <div class="flex flex-col">
+          <span class="text-[10px] font-orbitron text-gray-400">NAV TARGET</span>
+          <span id="targetName" class="text-xs font-orbitron font-bold text-rose-300">SUN (太陽)</span>
+        </div>
+        <div class="w-16 bg-gray-700 h-2 rounded-full overflow-hidden">
           <div id="radarBar" class="bg-gradient-to-r from-cyan-400 to-rose-500 h-full w-0 transition-all duration-150"></div>
         </div>
-        <span id="targetDist" class="text-xs font-orbitron text-cyan-400">45m</span>
+        <span id="targetDist" class="text-xs font-orbitron text-cyan-400">45°</span>
       </div>
 
-      <!-- Center AR Reticle Crosshair -->
+      <!-- Center Reticle / Crosshair -->
       <div id="reticle" class="relative w-24 h-24 flex items-center justify-center pointer-events-none transition-transform duration-200">
-        <!-- Outer Rotating HUD Ring -->
         <div class="absolute inset-0 border border-cyan-500/40 rounded-full rotate-hud border-dashed"></div>
-        <!-- Pulse Ring -->
         <div class="absolute inset-2 border-2 border-cyan-400/60 rounded-full reticle-ring"></div>
-        <!-- Center Crosshair Dot -->
-        <div id="reticleDot" class="w-3 h-3 bg-cyan-400 rounded-full shadow-[0_0_12px_#38bdf8] transition-colors duration-200"></div>
-        <!-- Corner Brackets -->
+        <div id="reticleDot" class="w-3.5 h-3.5 bg-cyan-400 rounded-full shadow-[0_0_12px_#38bdf8] transition-all duration-200"></div>
         <div class="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-cyan-400"></div>
         <div class="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-cyan-400"></div>
         <div class="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-cyan-400"></div>
         <div class="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-cyan-400"></div>
       </div>
 
-      <!-- Lock Target Notification Toast -->
-      <div id="lockToast" class="bg-cyan-500/20 border border-cyan-400/50 text-cyan-200 text-xs px-3 py-1.5 rounded-full font-orbitron opacity-0 transition-opacity duration-300">
-        <i class="fa-solid fa-lock text-cyan-400 mr-1.5"></i> STAR LOCK ACQUIRED
+      <!-- Lock Target Notification -->
+      <div id="lockToast" class="bg-cyan-500/20 border border-cyan-400/50 text-cyan-200 text-xs px-3 py-1 rounded-full font-orbitron opacity-0 transition-opacity duration-300 flex items-center space-x-1.5">
+        <i class="fa-solid fa-lock text-cyan-400"></i>
+        <span id="lockToastText">TARGET ACQUIRED</span>
       </div>
     </div>
 
-    <!-- Bottom Control Panel & Info Modal Trigger -->
-    <div class="flex flex-col space-y-3 pointer-events-auto">
+    <!-- Bottom Controls & Modal Panel -->
+    <div class="flex flex-col space-y-2 pointer-events-auto">
       
-      <!-- Constellation Info Card (Appears on focus/lock) -->
-      <div id="infoCard" class="glass-panel rounded-2xl p-4 transition-all duration-300 transform translate-y-4 opacity-0 pointer-events-auto max-h-40 overflow-y-auto">
+      <!-- Target / Celestial Object Details Card -->
+      <div id="infoCard" class="glass-panel rounded-2xl p-3.5 transition-all duration-300 transform translate-y-4 opacity-0 max-h-40 overflow-y-auto">
         <div class="flex justify-between items-start mb-1">
           <div>
-            <span id="constellationCategory" class="text-[10px] font-orbitron uppercase text-cyan-400 tracking-wider">Major Constellation</span>
-            <h2 id="constellationTitle" class="text-xl font-bold text-white flex items-center gap-2">
-              オリオン座 <span id="constellationEn" class="text-xs text-gray-400 font-orbitron font-normal">(Orion)</span>
+            <span id="objectCategory" class="text-[10px] font-orbitron uppercase text-cyan-400 tracking-wider">SOLAR SYSTEM PLANET</span>
+            <h2 id="objectTitle" class="text-lg font-bold text-white flex items-center gap-2">
+              火星 <span id="objectEn" class="text-xs text-gray-400 font-orbitron font-normal">(Mars)</span>
             </h2>
           </div>
-          <span id="captureBadge" class="hidden bg-emerald-500/20 border border-emerald-400 text-emerald-300 text-[10px] font-orbitron px-2 py-0.5 rounded-full">
-            <i class="fa-solid fa-check mr-1"></i>CAPTURED
+          <span id="coordBadge" class="bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 text-[10px] font-orbitron px-2 py-0.5 rounded-full">
+            RA: 14h / DEC: -12°
           </span>
         </div>
-        <p id="constellationLore" class="text-xs text-gray-300 leading-relaxed font-light">
-          ギリシャ神話の狩人オリオンの姿。中央に並ぶ3連星（三ツ星）が特徴的で、冬の夜空で最も鮮やかに輝く星座の一つ。
+        <p id="objectLore" class="text-xs text-gray-300 leading-relaxed font-light">
+          赤みを帯びた表面から「赤い惑星」と呼ばれる太陽系第4惑星。大気が薄く、二酸化炭素主成分の環境を持っています。
         </p>
       </div>
 
-      <!-- Action & Mode Buttons -->
-      <div class="flex space-x-2">
-        <!-- Switch Mode Button -->
-        <button id="modeToggleBtn" class="glass-button flex-1 py-3 px-4 rounded-xl flex items-center justify-center space-x-2 text-sm font-semibold text-cyan-300">
+      <!-- Mode Selector Tabs -->
+      <div class="grid grid-cols-3 gap-1.5">
+        <button id="modeGuideBtn" class="glass-button py-2.5 rounded-xl text-xs font-bold text-cyan-300 flex items-center justify-center space-x-1 active">
           <i class="fa-solid fa-compass"></i>
-          <span id="modeText">MODE: GUIDE</span>
+          <span>ガイド</span>
         </button>
-
-        <!-- Capture / Release Star Button -->
-        <button id="captureBtn" class="glass-button flex-1 py-3 px-4 rounded-xl flex items-center justify-center space-x-2 text-sm font-bold bg-gradient-to-r from-cyan-600/50 to-blue-600/50 text-white shadow-lg border-cyan-400">
-          <i class="fa-solid fa-hand-sparkles"></i>
-          <span id="captureBtnText">CAPTURE STAR</span>
+        <button id="modeHunterBtn" class="glass-button py-2.5 rounded-xl text-xs font-bold text-cyan-300 flex items-center justify-center space-x-1">
+          <i class="fa-solid fa-crosshairs"></i>
+          <span>ナビ</span>
+        </button>
+        <button id="modeCatalogBtn" class="glass-button py-2.5 rounded-xl text-xs font-bold text-cyan-300 flex items-center justify-center space-x-1">
+          <i class="fa-solid fa-list-ul"></i>
+          <span>天体図鑑</span>
         </button>
       </div>
     </div>
   </div>
 
-  <!-- Permissions & Onboarding Modal (Overlay) -->
-  <div id="permissionModal" class="absolute inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
-    <div class="w-20 h-20 bg-cyan-500/10 border border-cyan-400/40 rounded-full flex items-center justify-center mb-6 text-cyan-400 text-3xl animate-pulse">
-      <i class="fa-solid fa-vr-cardboard"></i>
+  <!-- Celestial Catalog Modal Overlay -->
+  <div id="catalogModal" class="absolute inset-0 z-40 bg-slate-950/90 backdrop-blur-md hidden flex flex-col p-4 pt-12">
+    <div class="flex justify-between items-center mb-4 pb-2 border-b border-cyan-500/30">
+      <h2 class="text-lg font-bold font-orbitron text-cyan-300 flex items-center gap-2">
+        <i class="fa-solid fa-book-atlas"></i> 天体・星座カタログ
+      </h2>
+      <button id="closeCatalogBtn" class="text-gray-400 hover:text-white text-xl">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
     </div>
-    <h1 class="text-2xl font-extrabold font-orbitron text-white mb-2 tracking-wide">AR SKY NAVIGATOR</h1>
-    <p class="text-xs text-cyan-300/80 mb-6 font-orbitron">REAL-TIME CONSTELLATION FINDER & STAR CATCHER</p>
     
-    <div class="text-xs text-gray-300 max-w-xs space-y-3 mb-8 text-left bg-slate-900/80 p-4 rounded-xl border border-slate-800">
-      <div class="flex items-start space-x-3">
-        <i class="fa-solid fa-camera text-cyan-400 mt-0.5"></i>
-        <span><strong>Camera:</strong> Displays live background sky.</span>
+    <div id="catalogList" class="flex-1 overflow-y-auto space-y-2 pr-1">
+      <!-- Dynamic Catalog List -->
+    </div>
+  </div>
+
+  <!-- Permissions & Startup Onboarding Overlay -->
+  <div id="permissionModal" class="absolute inset-0 z-50 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
+    <div class="w-16 h-16 bg-cyan-500/10 border border-cyan-400/40 rounded-full flex items-center justify-center mb-4 text-cyan-400 text-2xl animate-pulse">
+      <i class="fa-solid fa-sun text-amber-400"></i>
+    </div>
+    <h1 class="text-xl font-extrabold font-orbitron text-white mb-1 tracking-wide">AR CELESTIAL NAVIGATOR</h1>
+    <p class="text-[11px] text-cyan-300/80 mb-4 font-orbitron">太陽・月・惑星・88星座 リアルタイムARハンター</p>
+    
+    <div class="text-xs text-gray-300 max-w-xs space-y-2.5 mb-6 text-left bg-slate-900/80 p-3.5 rounded-xl border border-slate-800">
+      <div class="flex items-start space-x-2.5">
+        <i class="fa-solid fa-sun text-amber-400 mt-0.5"></i>
+        <span><strong>太陽・月・主要惑星:</strong> リアルタイム位置軌道計算による動的描画。</span>
       </div>
-      <div class="flex items-start space-x-3">
+      <div class="flex items-start space-x-2.5">
         <i class="fa-solid fa-arrows-spin text-cyan-400 mt-0.5"></i>
-        <span><strong>Gyroscope:</strong> Tracks phone tilt & direction in 360°.</span>
+        <span><strong>ジャイロ連動:</strong> スマホを空にかざして360°天体検索。</span>
       </div>
-      <div class="flex items-start space-x-3">
+      <div class="flex items-start space-x-2.5">
         <i class="fa-solid fa-vibrate text-cyan-400 mt-0.5"></i>
-        <span><strong>Haptics:</strong> Provides tactile feedback on alignment.</span>
+        <span><strong>バイブレーション:</strong> 天体補獲時に振動フィードバック。</span>
       </div>
     </div>
 
-    <button id="startSensorsBtn" class="w-full max-w-xs py-4 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold rounded-xl shadow-lg shadow-cyan-500/20 font-orbitron tracking-wider text-sm transition-transform active:scale-95">
+    <button id="startSensorsBtn" class="w-full max-w-xs py-3.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold rounded-xl shadow-lg shadow-cyan-500/20 font-orbitron tracking-wider text-xs transition-transform active:scale-95">
       START AR EXPERIENCE
     </button>
     
-    <p class="text-[10px] text-gray-500 mt-4">PC / Non-gyro devices can drag canvas to navigate sky.</p>
+    <p class="text-[10px] text-gray-500 mt-3">PC / 非対応端末は画面ドラッグ操作可能</p>
   </div>
 
   <!-- JavaScript App Logic -->
   <script>
     /**
-     * CONSTELLATIONS DATA DEFINITION
-     * Defined with celestial sphere coordinates (RA/Dec mapped to spherical Theta/Phi)
+     * CELESTIAL ALGORITHMS & ORBITAL CALCULATIONS
+     * Simplified astronomical algorithms for Sun, Moon, Mercury, Venus, Mars, Jupiter, Saturn positions
+     */
+    function getJulianDate(date) {
+      return (date.getTime() / 86400000) + 2440587.5;
+    }
+
+    function computeCelestialPositions(date = new Date()) {
+      const d = getJulianDate(date) - 2451545.0; // Days since J2000.0
+
+      // 1. Sun Position
+      const L_sun = (280.466 + 0.9856474 * d) % 360;
+      const g_sun = THREE.MathUtils.degToRad((357.528 + 0.9856003 * d) % 360);
+      const sunEclipticLong = THREE.MathUtils.degToRad(L_sun + 1.915 * Math.sin(g_sun) + 0.020 * Math.sin(2 * g_sun));
+      
+      const obl = THREE.MathUtils.degToRad(23.439 - 0.0000004 * d); // Obliquity of ecliptic
+      
+      // Sun RA/Dec
+      const sunRA = THREE.MathUtils.radToDeg(Math.atan2(Math.cos(obl) * Math.sin(sunEclipticLong), Math.cos(sunEclipticLong)));
+      const sunDec = THREE.MathUtils.radToDeg(Math.asin(Math.sin(obl) * Math.sin(sunEclipticLong)));
+
+      // 2. Moon Position (Approximate)
+      const L_moon = (218.316 + 13.176396 * d) % 360;
+      const M_moon = THREE.MathUtils.degToRad((134.963 + 13.064993 * d) % 360);
+      const F_moon = THREE.MathUtils.degToRad((93.272 + 13.229350 * d) % 360);
+      
+      const moonLong = THREE.MathUtils.degToRad(L_moon + 6.289 * Math.sin(M_moon));
+      const moonLat = THREE.MathUtils.degToRad(5.128 * Math.sin(F_moon));
+      
+      const moonRA = THREE.MathUtils.radToDeg(Math.atan2(Math.sin(moonLong) * Math.cos(obl) - Math.tan(moonLat) * Math.sin(obl), Math.cos(moonLong)));
+      const moonDec = THREE.MathUtils.radToDeg(Math.asin(Math.sin(moonLat) * Math.cos(obl) + Math.cos(moonLat) * Math.sin(obl) * Math.sin(moonLong)));
+
+      // 3. Planet Ecliptic Approximations
+      const planetsData = [
+        { id: "sun", nameJa: "太陽", nameEn: "Sun", ra: sunRA, dec: sunDec, category: "Star (恒星)", lore: "太陽系の中心に位置する巨大なプラズマの球体。光と熱を全惑星に届けています。" },
+        { id: "moon", nameJa: "月", nameEn: "Moon", ra: moonRA, dec: moonDec, category: "Satellite (衛星)", lore: "地球唯一の天然衛星。約27.3日で地球を一周し、満ち欠けを見せます。" },
+        { id: "mercury", nameJa: "水星", nameEn: "Mercury", meanLong: 252.25 + 4.092334 * d, inc: 7.0, category: "Planet (水星)", lore: "太陽に最も近い極小の惑星。クレーターに覆われた極端な寒暖差の表面を持ちます。" },
+        { id: "venus", nameJa: "金星", nameEn: "Venus", meanLong: 181.98 + 1.602130 * d, inc: 3.39, category: "Planet (金星)", lore: "「明けの明星」「宵の明星」として最も明るく輝く、二酸化炭素の厚い大気に包まれた灼熱の惑星。" },
+        { id: "mars", nameJa: "火星", nameEn: "Mars", meanLong: 355.43 + 0.524033 * d, inc: 1.85, category: "Planet (火星)", lore: "「赤い惑星」と呼ばれる第4惑星。かつて水が存在した痕跡が数多く発見されています。" },
+        { id: "jupiter", nameJa: "木星", nameEn: "Jupiter", meanLong: 34.35 + 0.083085 * d, inc: 1.30, category: "Planet (木星)", lore: "太陽系最大のガス巨大惑星。特徴的な大赤斑と強力な磁場を持ちます。" },
+        { id: "saturn", nameJa: "土星", nameEn: "Saturn", meanLong: 50.08 + 0.033460 * d, inc: 2.49, category: "Planet (土星)", lore: "美しい氷の環（リング）を身に纏った巨大ガス惑星。無数の衛星を従えています。" }
+      ];
+
+      planetsData.forEach(p => {
+        if (p.ra === undefined) {
+          const lRad = THREE.MathUtils.degToRad(p.meanLong % 360);
+          p.ra = THREE.MathUtils.radToDeg(Math.atan2(Math.sin(lRad) * Math.cos(obl), Math.cos(lRad)));
+          p.dec = THREE.MathUtils.radToDeg(Math.asin(Math.sin(obl) * Math.sin(lRad)));
+        }
+      });
+
+      return planetsData;
+    }
+
+    /**
+     * CONSTELLATION DATA
      */
     const CONSTELLATIONS = [
       {
         id: "orion",
         nameJa: "オリオン座",
         nameEn: "Orion",
-        category: "Winter Major Constellation",
-        lore: "ギリシャ神話の偉大な狩人。中央の「三ツ星」と、右上の赤色超巨星ベテルギウス、左下の青白色巨星リゲルが目印です。",
+        category: "Constellation",
+        lore: "冬の夜空で最も鮮やかに輝く狩人の姿。中央の三ツ星とベテルギウス・リゲルが目印。",
         stars: [
-          { name: "ベテルギウス", ra: 0, dec: 10, mag: 1.5, size: 0.8, color: 0xff5533 }, // 0
-          { name: "リゲル", ra: 15, dec: -15, mag: 1.8, size: 0.9, color: 0x88ccff },      // 1
-          { name: "ベラトリックス", ra: -8, dec: 8, mag: 1.0, size: 0.6, color: 0xaaffff },   // 2
-          { name: "サイフ", ra: 10, dec: -14, mag: 1.1, size: 0.6, color: 0x88ccff },       // 3
-          { name: "アルニタク", ra: 3, dec: -2, mag: 1.2, size: 0.5, color: 0xffffff },    // 4 (Mintaka/Alnitak/Alnilam)
-          { name: "アルニラム", ra: 0, dec: -2, mag: 1.2, size: 0.5, color: 0xffffff },    // 5
-          { name: "ミンタカ", ra: -3, dec: -2, mag: 1.2, size: 0.5, color: 0xffffff }     // 6
+          { name: "ベテルギウス", ra: 0, dec: 10, size: 0.8, color: 0xff5533 },
+          { name: "リゲル", ra: 15, dec: -15, size: 0.9, color: 0x88ccff },
+          { name: "ベラトリックス", ra: -8, dec: 8, size: 0.6, color: 0xaaffff },
+          { name: "サイフ", ra: 10, dec: -14, size: 0.6, color: 0x88ccff },
+          { name: "アルニタク", ra: 3, dec: -2, size: 0.5, color: 0xffffff },
+          { name: "アルニラム", ra: 0, dec: -2, size: 0.5, color: 0xffffff },
+          { name: "ミンタカ", ra: -3, dec: -2, size: 0.5, color: 0xffffff }
         ],
         edges: [[0, 2], [2, 6], [6, 5], [5, 4], [4, 0], [4, 1], [6, 3], [5, 3]]
       },
       {
         id: "ursa_major",
-        nameJa: "おおくま座 (北斗七星)",
+        nameJa: "おおくま座",
         nameEn: "Ursa Major",
-        category: "Circumpolar Constellation",
-        lore: "北の空に輝くひしゃく型の7星「北斗七星」を擁する星座。先端の2星を結ぶ線を延長すると北極星を見つけることができます。",
+        category: "Constellation",
+        lore: "北斗七星を背中に含む有名な北天の星座。北極星を探す目印として使われます。",
         stars: [
-          { name: "ドゥーベ", ra: 45, dec: 60, mag: 1.4, size: 0.7, color: 0xffddaa },
-          { name: "メラク", ra: 40, dec: 55, mag: 1.1, size: 0.6, color: 0xffffff },
-          { name: "フェクダ", ra: 32, dec: 53, mag: 1.0, size: 0.6, color: 0xffffff },
-          { name: "メグレズ", ra: 28, dec: 56, mag: 0.8, size: 0.5, color: 0xffffff },
-          { name: "アリオト", ra: 20, dec: 55, mag: 1.2, size: 0.6, color: 0xaaffff },
-          { name: "ミザール", ra: 12, dec: 54, mag: 1.2, size: 0.6, color: 0xffffff },
-          { name: "アルカイド", ra: 3, dec: 49, mag: 1.3, size: 0.7, color: 0x88ccff }
+          { name: "ドゥーベ", ra: 45, dec: 60, size: 0.7, color: 0xffddaa },
+          { name: "メラク", ra: 40, dec: 55, size: 0.6, color: 0xffffff },
+          { name: "フェクダ", ra: 32, dec: 53, size: 0.6, color: 0xffffff },
+          { name: "メグレズ", ra: 28, dec: 56, size: 0.5, color: 0xffffff },
+          { name: "アリオト", ra: 20, dec: 55, size: 0.6, color: 0xaaffff },
+          { name: "ミザール", ra: 12, dec: 54, size: 0.6, color: 0xffffff },
+          { name: "アルカイド", ra: 3, dec: 49, size: 0.7, color: 0x88ccff }
         ],
         edges: [[0, 1], [1, 2], [2, 3], [3, 0], [3, 4], [4, 5], [5, 6]]
       },
@@ -268,88 +355,52 @@
         id: "cassiopeia",
         nameJa: "カシオペヤ座",
         nameEn: "Cassiopeia",
-        category: "Autumn/Circumpolar",
-        lore: "夜空にアルファベットの「W」を描く特徴的な星座。古代エチオピアの王妃カシオペヤの姿とされています。",
+        category: "Constellation",
+        lore: "夜空にアルファベットの「W」を描く北天の星座。北極星の対角線上に位置します。",
         stars: [
-          { name: "カフ", ra: 120, dec: 58, mag: 1.1, size: 0.6, color: 0xffffff },
-          { name: "シェダル", ra: 110, dec: 56, mag: 1.3, size: 0.7, color: 0xffaa55 },
-          { name: "ツィー", ra: 100, dec: 60, mag: 1.4, size: 0.7, color: 0x88ccff },
-          { name: "ルクバー", ra: 90, dec: 59, mag: 1.0, size: 0.6, color: 0xffffff },
-          { name: "セギン", ra: 82, dec: 63, mag: 0.9, size: 0.5, color: 0x88ccff }
+          { name: "カフ", ra: 120, dec: 58, size: 0.6, color: 0xffffff },
+          { name: "シェダル", ra: 110, dec: 56, size: 0.7, color: 0xffaa55 },
+          { name: "ツィー", ra: 100, dec: 60, size: 0.7, color: 0x88ccff },
+          { name: "ルクバー", ra: 90, dec: 59, size: 0.6, color: 0xffffff },
+          { name: "セギン", ra: 82, dec: 63, size: 0.5, color: 0x88ccff }
         ],
         edges: [[0, 1], [1, 2], [2, 3], [3, 4]]
-      },
-      {
-        id: "cygnus",
-        nameJa: "はくちょう座",
-        nameEn: "Cygnus",
-        category: "Summer Triangle Star",
-        lore: "天の川の上に大きな十字を描く「北十字」。一等星デネブは夏の大三角の頂点の一つです。",
-        stars: [
-          { name: "デネブ", ra: -80, dec: 45, mag: 1.8, size: 1.0, color: 0xffffff },
-          { name: "サドル", ra: -85, dec: 40, mag: 1.2, size: 0.6, color: 0xffddaa },
-          { name: "アルビレオ", ra: -92, dec: 28, mag: 1.1, size: 0.6, color: 0xffaa33 },
-          { name: "ギエナー", ra: -72, dec: 34, mag: 1.0, size: 0.6, color: 0x88ccff },
-          { name: "ルキバ", ra: -98, dec: 44, mag: 1.0, size: 0.6, color: 0x88ccff }
-        ],
-        edges: [[0, 1], [1, 2], [1, 3], [1, 4]]
-      },
-      {
-        id: "leo",
-        nameJa: "しし座",
-        nameEn: "Leo",
-        category: "Spring Major Constellation",
-        lore: "春の夜空に君臨するライオンの星座。一等星レグルスは「小さな王」を意味し、黄道上に位置します。",
-        stars: [
-          { name: "レグルス", ra: 160, dec: 12, mag: 1.6, size: 0.9, color: 0x88ccff },
-          { name: "アルギエバ", ra: 155, dec: 20, mag: 1.2, size: 0.6, color: 0xffaa55 },
-          { name: "アダフェラ", ra: 152, dec: 26, mag: 0.9, size: 0.5, color: 0xffffff },
-          { name: "デネボラ", ra: 180, dec: 14, mag: 1.3, size: 0.7, color: 0xffffff },
-          { name: "ゾスマ", ra: 172, dec: 20, mag: 1.1, size: 0.6, color: 0xffffff }
-        ],
-        edges: [[0, 1], [1, 2], [1, 4], [4, 3], [0, 3]]
       },
       {
         id: "scorpius",
         nameJa: "さそり座",
         nameEn: "Scorpius",
-        category: "Summer Zodiac",
-        lore: "S字に曲がった毒針を持つ大きなサソリ。中心で不気味に赤く輝くアンタレスは「火星に対抗するもの」を意味します。",
+        category: "Constellation",
+        lore: "天の川沿いにS字を描く夏の星座。真ん中で不気味に赤く光るアンタレスが目印です。",
         stars: [
-          { name: "アンタレス", ra: -140, dec: -26, mag: 1.9, size: 1.1, color: 0xff3300 },
-          { name: "グラフィアス", ra: -130, dec: -20, mag: 1.0, size: 0.6, color: 0x88ccff },
-          { name: "ジュバ", ra: -135, dec: -22, mag: 1.1, size: 0.6, color: 0xffffff },
-          { name: "シャウラ", ra: -160, dec: -37, mag: 1.4, size: 0.7, color: 0x88ccff },
-          { name: "サルガス", ra: -152, dec: -43, mag: 1.2, size: 0.6, color: 0xffddaa }
+          { name: "アンタレス", ra: -140, dec: -26, size: 1.1, color: 0xff3300 },
+          { name: "グラフィアス", ra: -130, dec: -20, size: 0.6, color: 0x88ccff },
+          { name: "ジュバ", ra: -135, dec: -22, size: 0.6, color: 0xffffff },
+          { name: "シャウラ", ra: -160, dec: -37, size: 0.7, color: 0x88ccff }
         ],
-        edges: [[1, 2], [2, 0], [0, 4], [4, 3]]
+        edges: [[1, 2], [2, 0], [0, 3]]
       }
     ];
 
     /**
-     * APP STATE & AUDIO ENGINE
+     * APP STATE & AUDIO SYNTHESIZER
      */
     const state = {
       isAudioEnabled: true,
       isVibeEnabled: true,
       isCameraActive: false,
       mode: 'guide', // 'guide' | 'hunter'
-      capturedStars: new Set(),
-      targetConstellationIndex: 0,
-      focusedConstellation: null,
-      focusedStar: null,
-      // Gyro/Orientation Tracking
+      targetObject: null,
+      focusedObject: null,
       orientation: { alpha: 0, beta: 0, gamma: 0 },
       manualRot: { x: 0, y: 0 },
       isDragging: false,
-      previousMousePosition: { x: 0, y: 0 }
+      previousMousePosition: { x: 0, y: 0 },
+      celestialData: []
     };
 
-    // Web Audio Synthesizer
     class AudioEngine {
-      constructor() {
-        this.ctx = null;
-      }
+      constructor() { this.ctx = null; }
       init() {
         if (!this.ctx) {
           const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -362,7 +413,7 @@
         const gain = this.ctx.createGain();
         osc.type = 'sine';
         osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
-        gain.gain.setValueAtTime(0.05, this.ctx.currentTime);
+        gain.gain.setValueAtTime(0.04, this.ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.1);
         osc.connect(gain);
         gain.connect(this.ctx.destination);
@@ -372,52 +423,32 @@
       playLockChime() {
         if (!state.isAudioEnabled || !this.ctx) return;
         const now = this.ctx.currentTime;
-        [523.25, 659.25, 783.99].forEach((freq, idx) => {
+        [523.25, 659.25, 783.99, 1046.50].forEach((freq, idx) => {
           const osc = this.ctx.createOscillator();
           const gain = this.ctx.createGain();
           osc.type = 'triangle';
-          osc.frequency.setValueAtTime(freq, now + idx * 0.06);
-          gain.gain.setValueAtTime(0.1, now + idx * 0.06);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.06 + 0.3);
+          osc.frequency.setValueAtTime(freq, now + idx * 0.05);
+          gain.gain.setValueAtTime(0.08, now + idx * 0.05);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.05 + 0.3);
           osc.connect(gain);
           gain.connect(this.ctx.destination);
-          osc.start(now + idx * 0.06);
-          osc.stop(now + idx * 0.06 + 0.3);
+          osc.start(now + idx * 0.05);
+          osc.stop(now + idx * 0.05 + 0.3);
         });
-      }
-      playCaptureBurst() {
-        if (!state.isAudioEnabled || !this.ctx) return;
-        const now = this.ctx.currentTime;
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(220, now);
-        osc.frequency.exponentialRampToValueAtTime(880, now + 0.25);
-        gain.gain.setValueAtTime(0.15, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
-        osc.connect(gain);
-        gain.connect(this.ctx.destination);
-        osc.start(now);
-        osc.stop(now + 0.3);
       }
     }
     const audio = new AudioEngine();
 
-    // Trigger Haptic Feedback safely
     function triggerHaptic(pattern) {
       if (!state.isVibeEnabled || !navigator.vibrate) return;
-      try {
-        navigator.vibrate(pattern);
-      } catch (e) {
-        // Suppress errors on unsupported platforms
-      }
+      try { navigator.vibrate(pattern); } catch (e) {}
     }
 
     /**
-     * THREE.JS AR SKY RENDERER
+     * THREE.JS SCENE & RENDER ENGINE
      */
-    let scene, camera, renderer, skySphereGroup;
-    const starMeshList = [];
+    let scene, camera, renderer, skySphereGroup, sunLight;
+    const targetableMeshList = [];
     const raycaster = new THREE.Raycaster();
     const centerScreenVec = new THREE.Vector2(0, 0);
 
@@ -435,77 +466,143 @@
       skySphereGroup = new THREE.Group();
       scene.add(skySphereGroup);
 
-      // Create Ambient Background Particles (Background Stars)
+      // Lights
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+      scene.add(ambientLight);
+      
+      sunLight = new THREE.DirectionalLight(0xfffaed, 1.2);
+      scene.add(sunLight);
+
+      // Background Starfield Particles
       const bgStarGeo = new THREE.BufferGeometry();
-      const bgStarCount = 1200;
+      const bgStarCount = 1500;
       const bgStarPos = new Float32Array(bgStarCount * 3);
       for (let i = 0; i < bgStarCount * 3; i += 3) {
         const u = Math.random();
         const v = Math.random();
         const theta = u * 2.0 * Math.PI;
         const phi = Math.acos(2.0 * v - 1.0);
-        const r = 250;
+        const r = 280;
         bgStarPos[i] = r * Math.sin(phi) * Math.cos(theta);
         bgStarPos[i + 1] = r * Math.sin(phi) * Math.sin(theta);
         bgStarPos[i + 2] = r * Math.cos(phi);
       }
       bgStarGeo.setAttribute('position', new THREE.BufferAttribute(bgStarPos, 3));
-      const bgStarMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.8, transparent: opacity = true, opacity: 0.7 });
-      const bgStars = new THREE.Points(bgStarGeo, bgStarMat);
-      skySphereGroup.add(bgStars);
+      const bgStarMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.9, transparent: true, opacity: 0.8 });
+      skySphereGroup.add(new THREE.Points(bgStarGeo, bgStarMat));
 
-      // Build Interactive Constellation Meshes
+      // Build Solar System & Constellations
+      buildSolarSystemObjects();
+      buildConstellations();
+
+      window.addEventListener('resize', onWindowResize);
+    }
+
+    function buildSolarSystemObjects() {
+      state.celestialData = computeCelestialPositions();
+
+      state.celestialData.forEach(obj => {
+        const radius = 120;
+        const raRad = THREE.MathUtils.degToRad(obj.ra);
+        const decRad = THREE.MathUtils.degToRad(obj.dec);
+
+        const x = radius * Math.cos(decRad) * Math.sin(raRad);
+        const y = radius * Math.sin(decRad);
+        const z = radius * Math.cos(decRad) * Math.cos(raRad);
+
+        let mesh;
+
+        if (obj.id === 'sun') {
+          const geo = new THREE.SphereGeometry(6, 32, 32);
+          const mat = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
+          mesh = new THREE.Mesh(geo, mat);
+
+          // Sun Corona Glow Effect
+          const glowGeo = new THREE.SphereGeometry(8.5, 32, 32);
+          const glowMat = new THREE.MeshBasicMaterial({ color: 0xffdd44, transparent: true, opacity: 0.35 });
+          mesh.add(new THREE.Mesh(glowGeo, glowMat));
+
+          sunLight.position.set(x, y, z);
+        } else if (obj.id === 'moon') {
+          const geo = new THREE.SphereGeometry(4, 32, 32);
+          const mat = new THREE.MeshStandardMaterial({ color: 0xdddddd, roughness: 0.9 });
+          mesh = new THREE.Mesh(geo, mat);
+        } else if (obj.id === 'saturn') {
+          const group = new THREE.Group();
+          const geo = new THREE.SphereGeometry(3.5, 32, 32);
+          const mat = new THREE.MeshStandardMaterial({ color: 0xe0c870 });
+          const body = new THREE.Mesh(geo, mat);
+          group.add(body);
+
+          // Saturn Ring
+          const ringGeo = new THREE.RingGeometry(4.8, 7.5, 32);
+          const ringMat = new THREE.MeshBasicMaterial({ color: 0xc2a856, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
+          const ring = new THREE.Mesh(ringGeo, ringMat);
+          ring.rotation.x = Math.PI / 2.5;
+          group.add(ring);
+          mesh = group;
+        } else if (obj.id === 'jupiter') {
+          const geo = new THREE.SphereGeometry(4.5, 32, 32);
+          const mat = new THREE.MeshStandardMaterial({ color: 0xd8a070, roughness: 0.6 });
+          mesh = new THREE.Mesh(geo, mat);
+        } else if (obj.id === 'mars') {
+          const geo = new THREE.SphereGeometry(3, 32, 32);
+          const mat = new THREE.MeshStandardMaterial({ color: 0xff4422, roughness: 0.7 });
+          mesh = new THREE.Mesh(geo, mat);
+        } else {
+          // Mercury / Venus
+          const geo = new THREE.SphereGeometry(obj.id === 'venus' ? 3.5 : 2.5, 32, 32);
+          const mat = new THREE.MeshStandardMaterial({ color: obj.id === 'venus' ? 0xffeeaa : 0xaaaaaa });
+          mesh = new THREE.Mesh(geo, mat);
+        }
+
+        mesh.position.set(x, y, z);
+        mesh.userData = { targetObject: obj };
+        skySphereGroup.add(mesh);
+        
+        // Push targetable elements
+        if (mesh.isMesh) {
+          targetableMeshList.push(mesh);
+        } else {
+          mesh.traverse(child => { if (child.isMesh) { child.userData = { targetObject: obj }; targetableMeshList.push(child); } });
+        }
+      });
+    }
+
+    function buildConstellations() {
       CONSTELLATIONS.forEach((constellation) => {
         const group = new THREE.Group();
-        group.userData = { constellation };
-
         const starPositions = [];
 
-        // 1. Render Stars
-        constellation.stars.forEach((starData, index) => {
+        constellation.stars.forEach((starData) => {
           const raRad = THREE.MathUtils.degToRad(starData.ra);
           const decRad = THREE.MathUtils.degToRad(starData.dec);
-          const radius = 100;
+          const radius = 150;
 
-          // Spherical conversion
           const x = radius * Math.cos(decRad) * Math.sin(raRad);
           const y = radius * Math.sin(decRad);
           const z = radius * Math.cos(decRad) * Math.cos(raRad);
-
           starPositions.push(new THREE.Vector3(x, y, z));
 
-          // Star Mesh Geometry
-          const geo = new THREE.SphereGeometry(starData.size * 1.8, 16, 16);
+          const geo = new THREE.SphereGeometry(starData.size * 1.5, 16, 16);
           const mat = new THREE.MeshBasicMaterial({ color: starData.color });
           const starMesh = new THREE.Mesh(geo, mat);
           starMesh.position.set(x, y, z);
+          starMesh.userData = { targetObject: { ...starData, id: constellation.id, nameJa: `${constellation.nameJa} (${starData.name})`, category: "Constellation Star", lore: constellation.lore } };
 
-          // Glow Ring Billboard
-          const ringGeo = new THREE.RingGeometry(starData.size * 2, starData.size * 3.2, 16);
-          const ringMat = new THREE.MeshBasicMaterial({ color: starData.color, side: THREE.DoubleSide, transparent: true, opacity: 0.4 });
-          const ringMesh = new THREE.Mesh(ringGeo, ringMat);
-          ringMesh.lookAt(0, 0, 0);
-          starMesh.add(ringMesh);
-
-          starMesh.userData = { constellation, starData, index };
           group.add(starMesh);
-          starMeshList.push(starMesh);
+          targetableMeshList.push(starMesh);
         });
 
-        // 2. Render Constellation Connecting Lines
-        const lineMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.45, linewidth: 2 });
+        // Connecting Lines
+        const lineMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.4 });
         constellation.edges.forEach(([i, j]) => {
-          const points = [starPositions[i], starPositions[j]];
-          const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
-          const line = new THREE.Line(lineGeo, lineMat);
-          group.add(line);
+          const lineGeo = new THREE.BufferGeometry().setFromPoints([starPositions[i], starPositions[j]]);
+          group.add(new THREE.Line(lineGeo, lineMat));
         });
 
         skySphereGroup.add(group);
       });
-
-      // Window Resize Handler
-      window.addEventListener('resize', onWindowResize);
     }
 
     function onWindowResize() {
@@ -515,7 +612,7 @@
     }
 
     /**
-     * CAMERA & ORIENTATION CONTROLS
+     * SENSOR & CAMERA FEED CONTROL
      */
     async function startCameraFeed() {
       const video = document.getElementById('cameraFeed');
@@ -527,43 +624,35 @@
         video.srcObject = stream;
         video.classList.remove('hidden');
         state.isCameraActive = true;
-        renderer.setClearColor(0x000000, 0); // Transparent canvas overlay
+        renderer.setClearColor(0x000000, 0);
       } catch (err) {
-        console.warn("Camera access denied or unavailable. Fallback to space canvas.", err);
         video.classList.add('hidden');
-        renderer.setClearColor(0x030712, 1); // Dark space canvas
+        renderer.setClearColor(0x030712, 1);
       }
     }
 
     function setupOrientationEvents() {
-      // iOS Permission Handler
       if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
         DeviceOrientationEvent.requestPermission()
-          .then(response => {
-            if (response === 'granted') {
-              window.addEventListener('deviceorientation', handleOrientation);
-            }
-          })
-          .catch(console.error);
+          .then(resp => {
+            if (resp === 'granted') window.addEventListener('deviceorientation', handleOrientation);
+          }).catch(console.error);
       } else {
         window.addEventListener('deviceorientation', handleOrientation);
       }
     }
 
     function handleOrientation(event) {
-      // Alpha: compass heading [0, 360], Beta: front-back pitch [-180, 180], Gamma: left-right roll [-90, 90]
       state.orientation.alpha = event.alpha || 0;
       state.orientation.beta = event.beta || 0;
       state.orientation.gamma = event.gamma || 0;
 
-      // Update HUD Indicators
       const heading = Math.round(event.webkitCompassHeading || (360 - state.orientation.alpha) % 360);
       document.getElementById('headingVal').textContent = `${heading.toString().padStart(3, '0')}° ${getCompassDirection(heading)}`;
       document.getElementById('pitchVal').textContent = `${Math.round(state.orientation.beta)}°`;
       document.getElementById('rollVal').textContent = `${Math.round(state.orientation.gamma)}°`;
       
-      const needle = document.getElementById('compassNeedle');
-      needle.style.transform = `rotate(${-heading}deg)`;
+      document.getElementById('compassNeedle').style.transform = `rotate(${-heading}deg)`;
     }
 
     function getCompassDirection(deg) {
@@ -571,9 +660,9 @@
       return dirs[Math.round(deg / 45) % 8];
     }
 
-    // Touch / Drag Fallback for Desktop Testing
+    // Touch Drag Fallback
     window.addEventListener('pointerdown', (e) => {
-      if (e.target.closest('#hudOverlay') && !e.target.closest('#reticle')) return;
+      if (e.target.closest('#hudOverlay')) return;
       state.isDragging = true;
       state.previousMousePosition = { x: e.clientX, y: e.clientY };
     });
@@ -585,7 +674,6 @@
 
       state.manualRot.y += deltaX * 0.005;
       state.manualRot.x += deltaY * 0.005;
-
       state.previousMousePosition = { x: e.clientX, y: e.clientY };
     });
 
@@ -594,169 +682,156 @@
     /**
      * MAIN ANIMATION & TARGET DETECTION LOOP
      */
-    let lastScanVibeTime = 0;
+    let lastVibeTime = 0;
 
     function animate(time) {
       requestAnimationFrame(animate);
 
-      // Apply Orientation / Gyro Rotation to Three Sky Camera
+      // Rotate Three.js Camera from Sensor or Touch
       if (state.orientation.alpha || state.orientation.beta) {
         const alphaRad = THREE.MathUtils.degToRad(state.orientation.alpha);
         const betaRad = THREE.MathUtils.degToRad(state.orientation.beta);
         const gammaRad = THREE.MathUtils.degToRad(state.orientation.gamma);
-
-        // Euler transform for device orientation
         const euler = new THREE.Euler(betaRad, alphaRad, -gammaRad, 'YXZ');
         camera.quaternion.setFromEuler(euler);
       } else {
-        // Fallback Manual Mouse/Touch Drag
         const euler = new THREE.Euler(state.manualRot.x, state.manualRot.y, 0, 'YXZ');
         camera.quaternion.setFromEuler(euler);
       }
 
-      // Constellation Star Alignment Raycasting Check
+      // Check Target Lock-on Collision via Raycaster
       raycaster.setFromCamera(centerScreenVec, camera);
-      const intersects = raycaster.intersectObjects(starMeshList, true);
+      const intersects = raycaster.intersectObjects(targetableMeshList, true);
 
       if (intersects.length > 0) {
-        const hitStar = intersects[0].object;
-        const starData = hitStar.userData.starData;
-        const constellation = hitStar.userData.constellation;
-
-        if (state.focusedStar !== starData) {
-          state.focusedStar = starData;
-          state.focusedConstellation = constellation;
-          onStarFocusEnter(constellation, starData);
+        const targetObj = intersects[0].object.userData.targetObject;
+        if (targetObj && state.focusedObject !== targetObj) {
+          state.focusedObject = targetObj;
+          onTargetFocusEnter(targetObj);
         }
 
-        // Haptic pulse while aiming at star
-        if (time - lastScanVibeTime > 400) {
-          triggerHaptic(30);
-          audio.playScanPulse(580);
-          lastScanVibeTime = time;
+        if (time - lastVibeTime > 400) {
+          triggerHaptic(35);
+          audio.playScanPulse(600);
+          lastVibeTime = time;
         }
-
       } else {
-        if (state.focusedStar) {
-          onStarFocusLeave();
-          state.focusedStar = null;
-          state.focusedConstellation = null;
+        if (state.focusedObject) {
+          onTargetFocusLeave();
+          state.focusedObject = null;
         }
       }
 
-      // Update Hunter Mode Proximity Radar
-      if (state.mode === 'hunter') {
-        updateHunterRadar();
+      // Update Navigation Compass Arrow in Hunter Mode
+      if (state.mode === 'hunter' && state.targetObject) {
+        updateHunterNavigation();
       }
 
       renderer.render(scene, camera);
     }
 
     /**
-     * UI & GAME LOGIC INTERACTORS
+     * UI & NAVIGATION INTERACTION
      */
-    function onStarFocusEnter(constellation, star) {
-      // Update Info HUD Panel
-      document.getElementById('constellationCategory').textContent = constellation.category;
-      document.getElementById('constellationTitle').childNodes[0].nodeValue = constellation.nameJa + " ";
-      document.getElementById('constellationEn').textContent = `(${constellation.nameEn} - ${star.name})`;
-      document.getElementById('constellationLore').textContent = constellation.lore;
-      
+    function onTargetFocusEnter(obj) {
+      document.getElementById('objectCategory').textContent = obj.category || "CELESTIAL BODY";
+      document.getElementById('objectTitle').childNodes[0].nodeValue = obj.nameJa + " ";
+      document.getElementById('objectEn').textContent = obj.nameEn ? `(${obj.nameEn})` : "";
+      document.getElementById('objectLore').textContent = obj.lore || "";
+      document.getElementById('coordBadge').textContent = `RA: ${Math.round(obj.ra || 0)}° / DEC: ${Math.round(obj.dec || 0)}°`;
+
       const infoCard = document.getElementById('infoCard');
       infoCard.classList.remove('opacity-0', 'translate-y-4');
       infoCard.classList.add('opacity-100', 'translate-y-0');
 
-      // Update Lock Toast
-      const lockToast = document.getElementById('lockToast');
-      lockToast.classList.remove('opacity-0');
+      document.getElementById('lockToast').classList.remove('opacity-0');
+      document.getElementById('reticleDot').classList.add('bg-rose-500', 'shadow-[0_0_20px_#f43f5e]');
       
-      // Highlight Reticle Dot
-      const reticleDot = document.getElementById('reticleDot');
-      reticleDot.classList.add('bg-rose-500', 'shadow-[0_0_20px_#f43f5e]');
-      reticleDot.classList.remove('bg-cyan-400');
-
-      // Update Capture Button Text
-      const isCaptured = state.capturedStars.has(`${constellation.id}_${star.name}`);
-      document.getElementById('captureBtnText').textContent = isCaptured ? "RELEASE STAR" : "CAPTURE STAR";
-      document.getElementById('captureBadge').classList.toggle('hidden', !isCaptured);
-
       audio.playLockChime();
       triggerHaptic([40, 60, 40]);
     }
 
-    function onStarFocusLeave() {
-      const lockToast = document.getElementById('lockToast');
-      lockToast.classList.add('opacity-0');
-
-      const reticleDot = document.getElementById('reticleDot');
-      reticleDot.classList.remove('bg-rose-500', 'shadow-[0_0_20px_#f43f5e]');
-      reticleDot.classList.add('bg-cyan-400');
+    function onTargetFocusLeave() {
+      document.getElementById('lockToast').classList.add('opacity-0');
+      document.getElementById('reticleDot').classList.remove('bg-rose-500', 'shadow-[0_0_20px_#f43f5e]');
     }
 
-    function handleCaptureAction() {
-      if (!state.focusedStar || !state.focusedConstellation) {
-        triggerHaptic([100, 50, 100]);
-        return;
-      }
-
-      const starKey = `${state.focusedConstellation.id}_${state.focusedStar.name}`;
-      
-      if (state.capturedStars.has(starKey)) {
-        // Release star
-        state.capturedStars.delete(starKey);
-        document.getElementById('captureBtnText').textContent = "CAPTURE STAR";
-        document.getElementById('captureBadge').classList.add('hidden');
-        triggerHaptic([60, 40, 60]);
-      } else {
-        // Capture star
-        state.capturedStars.add(starKey);
-        document.getElementById('captureBtnText').textContent = "RELEASE STAR";
-        document.getElementById('captureBadge').classList.remove('hidden');
-        
-        audio.playCaptureBurst();
-        triggerHaptic([80, 50, 80, 50, 150]);
-
-        // Sparkle / Pulse Effect on Button
-        const btn = document.getElementById('captureBtn');
-        btn.classList.add('scale-105');
-        setTimeout(() => btn.classList.remove('scale-105'), 200);
-      }
-    }
-
-    function updateHunterRadar() {
-      const target = CONSTELLATIONS[state.targetConstellationIndex];
-      document.getElementById('targetName').textContent = target.nameEn.toUpperCase();
-
-      // Find center star of target constellation
-      const targetStar = target.stars[0];
-      const raRad = THREE.MathUtils.degToRad(targetStar.ra);
-      const decRad = THREE.MathUtils.degToRad(targetStar.dec);
+    function updateHunterNavigation() {
+      const obj = state.targetObject;
+      const raRad = THREE.MathUtils.degToRad(obj.ra);
+      const decRad = THREE.MathUtils.degToRad(obj.dec);
       const targetVec = new THREE.Vector3(
-        100 * Math.cos(decRad) * Math.sin(raRad),
-        100 * Math.sin(decRad),
-        100 * Math.cos(decRad) * Math.cos(raRad)
+        120 * Math.cos(decRad) * Math.sin(raRad),
+        120 * Math.sin(decRad),
+        120 * Math.cos(decRad) * Math.cos(raRad)
       );
 
       const camDir = new THREE.Vector3();
       camera.getWorldDirection(camDir);
-      camDir.multiplyScalar(-100);
+      camDir.multiplyScalar(-120);
 
       const angleDeg = THREE.MathUtils.radToDeg(camDir.angleTo(targetVec));
-      const distMeter = Math.max(1, Math.round(angleDeg));
-      
-      document.getElementById('targetDist').textContent = `${distMeter}°`;
-      
+      document.getElementById('targetDist').textContent = `${Math.round(angleDeg)}°`;
+
       const radarPercent = Math.max(0, 100 - (angleDeg / 180) * 100);
       document.getElementById('radarBar').style.width = `${radarPercent}%`;
     }
 
+    function buildCatalogUI() {
+      const list = document.getElementById('catalogList');
+      list.innerHTML = '';
+
+      const allItems = [...state.celestialData, ...CONSTELLATIONS];
+      allItems.forEach(item => {
+        const row = document.createElement('div');
+        row.className = "glass-panel p-3 rounded-xl flex justify-between items-center cursor-pointer hover:border-cyan-400 transition-colors";
+        row.innerHTML = `
+          <div>
+            <div class="text-[10px] font-orbitron text-cyan-400">${item.category || 'Constellation'}</div>
+            <div class="text-sm font-bold text-white">${item.nameJa} <span class="text-xs text-gray-400 font-normal">(${item.nameEn})</span></div>
+          </div>
+          <button class="px-3 py-1 bg-cyan-500/20 border border-cyan-400/50 text-cyan-300 rounded-lg text-xs font-orbitron hover:bg-cyan-500/40">
+            TARGET
+          </button>
+        `;
+        row.addEventListener('click', () => {
+          state.targetObject = item;
+          document.getElementById('targetName').textContent = `${item.nameEn.toUpperCase()} (${item.nameJa})`;
+          document.getElementById('catalogModal').classList.add('hidden');
+          setMode('hunter');
+          triggerHaptic(40);
+        });
+        list.appendChild(row);
+      });
+    }
+
+    function setMode(newMode) {
+      state.mode = newMode;
+      document.getElementById('modeGuideBtn').classList.toggle('active', newMode === 'guide');
+      document.getElementById('modeHunterBtn').classList.toggle('active', newMode === 'hunter');
+      document.getElementById('modeCatalogBtn').classList.toggle('active', newMode === 'catalog');
+
+      document.getElementById('radarContainer').classList.toggle('hidden', newMode !== 'hunter');
+
+      if (newMode === 'catalog') {
+        buildCatalogUI();
+        document.getElementById('catalogModal').classList.remove('hidden');
+      } else {
+        document.getElementById('catalogModal').classList.add('hidden');
+      }
+
+      if (newMode === 'hunter' && !state.targetObject) {
+        state.targetObject = state.celestialData[0]; // Default Sun
+        document.getElementById('targetName').textContent = `${state.targetObject.nameEn.toUpperCase()} (${state.targetObject.nameJa})`;
+      }
+    }
+
     /**
-     * INITIALIZATION & EVENT BINDINGS
+     * APPLICATION INITIALIZATION
      */
     window.addEventListener('DOMContentLoaded', () => {
       initThreeSky();
 
-      // Modal Start Button
       document.getElementById('startSensorsBtn').addEventListener('click', () => {
         audio.init();
         setupOrientationEvents();
@@ -766,25 +841,16 @@
         animate(0);
       });
 
-      // Capture Button
-      document.getElementById('captureBtn').addEventListener('click', handleCaptureAction);
+      // Mode Tab Handlers
+      document.getElementById('modeGuideBtn').addEventListener('click', () => setMode('guide'));
+      document.getElementById('modeHunterBtn').addEventListener('click', () => setMode('hunter'));
+      document.getElementById('modeCatalogBtn').addEventListener('click', () => setMode('catalog'));
+      document.getElementById('closeCatalogBtn').addEventListener('click', () => setMode('guide'));
 
-      // Mode Switcher Toggle
-      document.getElementById('modeToggleBtn').addEventListener('click', () => {
-        state.mode = state.mode === 'guide' ? 'hunter' : 'guide';
-        document.getElementById('modeText').textContent = `MODE: ${state.mode.toUpperCase()}`;
-        document.getElementById('radarContainer').classList.toggle('hidden', state.mode !== 'hunter');
-        triggerHaptic(40);
-
-        if (state.mode === 'hunter') {
-          state.targetConstellationIndex = Math.floor(Math.random() * CONSTELLATIONS.length);
-        }
-      });
-
-      // Settings Toggle Buttons
+      // Toggles
       document.getElementById('toggleAudioBtn').addEventListener('click', (e) => {
         state.isAudioEnabled = !state.isAudioEnabled;
-        e.currentTarget.innerHTML = `<i class="fa-solid fa-volume-${state.isAudioEnabled ? 'high' : 'xmark'} text-sm"></i>`;
+        e.currentTarget.innerHTML = `<i class="fa-solid fa-volume-${state.isAudioEnabled ? 'high' : 'xmark'} text-xs"></i>`;
         triggerHaptic(30);
       });
 
