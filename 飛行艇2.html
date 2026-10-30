@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Earth Flight 3D - Infinite Runner</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Three.js CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Playfair+Display:ital,wght@0,600;0,800;1,600&display=swap');
+    
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: 'Playfair Display', serif;
+      background-color: #2b1d14;
+      color: #fff;
+      user-select: none;
+    }
+
+    .font-orbitron {
+      font-family: 'Cinzel', serif;
+    }
+
+    /* Ghibli Porco Rosso Vintage Glow Effects */
+    .glow-text {
+      text-shadow: 0 0 12px rgba(251, 191, 36, 0.8), 0 0 24px rgba(217, 119, 6, 0.5);
+    }
+
+    .stage-banner {
+      animation: bannerPop 2.5s ease-in-out forwards;
+    }
+
+    @keyframes bannerPop {
+      0% { opacity: 0; transform: scale(0.8) translateY(-20px); }
+      20% { opacity: 1; transform: scale(1) translateY(0); }
+      80% { opacity: 1; transform: scale(1) translateY(0); }
+      100% { opacity: 0; transform: scale(1.1) translateY(20px); }
+    }
+
+    .glass-panel {
+      background: rgba(43, 29, 20, 0.82);
+      backdrop-filter: blur(12px);
+      border: 2px solid rgba(245, 158, 11, 0.4);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+    }
+
+    /* Crimson Porco Button Style */
+    .btn-cyber {
+      position: relative;
+      background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+      color: #fef3c7;
+      border: 2px solid #fbbf24;
+      transition: all 0.25s ease;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(185, 28, 28, 0.5);
+    }
+
+    .btn-cyber:hover {
+      transform: translateY(-2px) scale(1.02);
+      background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+      box-shadow: 0 0 25px rgba(245, 158, 11, 0.7);
+    }
+
+    .btn-cyber:active {
+      transform: translateY(1px);
+    }
+  </style>
+</head>
+<body class="w-full h-screen overflow-hidden cursor-crosshair">
+
+  <!-- Three.js Canvas Container -->
+  <div id="game-container" class="w-full h-full absolute inset-0"></div>
+
+  <!-- Dynamic Speed Lines Canvas Layer -->
+  <canvas id="speed-lines-canvas" class="w-full h-full absolute inset-0 pointer-events-none z-10 opacity-0 transition-opacity duration-300"></canvas>
+
+  <!-- UI Overlay Layer -->
+  <div id="ui-layer" class="relative z-20 w-full h-full pointer-events-none flex flex-col justify-between p-4 sm:p-6">
+    
+    <!-- Top HUD Bar -->
+    <div id="hud-bar" class="w-full flex justify-between items-center opacity-0 transition-opacity duration-500">
+      <!-- Life Bar & Score & Speed Group -->
+      <div class="glass-panel px-4 py-2 rounded-xl flex items-center space-x-4 sm:space-x-6">
+        <!-- Life Gauge -->
+        <div class="flex flex-col">
+          <div class="flex justify-between items-center mb-1">
+            <span class="text-[10px] sm:text-xs text-amber-300 font-bold tracking-wider flex items-center gap-1">
+              <i class="fa-solid fa-plane text-red-500"></i> PLANE CONDITION
+            </span>
+            <span id="hp-val" class="text-xs font-orbitron font-bold text-amber-200 ml-2">100%</span>
+          </div>
+          <div class="w-28 sm:w-36 h-3 bg-stone-900/90 rounded-full p-0.5 border border-amber-500/40 overflow-hidden">
+            <div id="hp-bar" class="h-full bg-gradient-to-r from-red-600 via-amber-400 to-emerald-400 rounded-full transition-all duration-300 shadow-[0_0_10px_rgba(245,158,11,0.5)]" style="width: 100%;"></div>
+          </div>
+        </div>
+        <div class="h-8 w-px bg-amber-500/30"></div>
+        <div>
+          <div class="text-[10px] sm:text-xs text-amber-300 font-semibold tracking-wider">SCORE</div>
+          <div id="score-val" class="text-2xl sm:text-3xl font-black font-orbitron text-amber-100">0</div>
+        </div>
+        <div class="h-8 w-px bg-amber-500/30"></div>
+        <div>
+          <div class="text-[10px] sm:text-xs text-amber-300 font-semibold tracking-wider">SPEED</div>
+          <div id="speed-val" class="text-xl sm:text-2xl font-bold font-orbitron text-amber-200">40 <span class="text-xs">KNOTS</span></div>
+        </div>
+        <div class="h-8 w-px bg-amber-500/30"></div>
+        <div>
+          <div class="text-[10px] sm:text-xs text-amber-300 font-semibold tracking-wider">DISTANCE</div>
+          <div id="dist-val" class="text-xl sm:text-2xl font-bold font-orbitron text-amber-200">0 <span class="text-xs">M</span></div>
+        </div>
+      </div>
+
+      <!-- High Score Group -->
+      <div class="glass-panel px-4 py-2 rounded-xl flex items-center space-x-3">
+        <i class="fa-solid fa-trophy text-amber-400 text-lg"></i>
+        <div>
+          <div class="text-[10px] sm:text-xs text-gray-400">BEST</div>
+          <div id="high-score-hud" class="text-lg font-bold font-orbitron text-amber-300">0</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Start Screen Overlay -->
+  <div id="start-screen" class="absolute inset-0 z-30 flex items-center justify-center bg-stone-950/80 backdrop-blur-md transition-opacity duration-500">
+    <div class="glass-panel max-w-md w-11/12 p-8 rounded-3xl text-center border-amber-500/50 relative overflow-hidden">
+      <div class="inline-block px-3 py-1 bg-amber-500/20 border border-amber-400/40 rounded-full text-amber-200 text-xs font-semibold tracking-wider mb-3">
+        <i class="fa-solid fa-plane-departure mr-1 text-red-500"></i> SAVOIA S.21 FOLGORE
+      </div>
+
+      <h1 class="text-3xl sm:text-4xl font-black font-orbitron tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-amber-300 to-yellow-200 glow-text mb-3">
+        ADRIATIC FLIGHT
+      </h1>
+      <p class="text-amber-100 text-sm mb-6 tracking-wide italic">「飛ばねえ豚は、ただの豚だ」</p>
+
+      <div class="space-y-3 mb-8 text-left bg-stone-900/60 p-4 rounded-2xl border border-amber-500/20 text-sm">
+        <div class="flex items-center justify-between text-amber-100">
+          <span class="flex items-center gap-2"><i class="fa-solid fa-compass text-amber-400"></i> 操縦:</span>
+          <span class="font-bold font-orbitron text-amber-300">マウス移動 / スワイプ操作</span>
+        </div>
+        <div class="flex items-center justify-between text-amber-100">
+          <span class="flex items-center gap-2"><i class="fa-solid fa-plane-arrival text-red-400"></i> 離陸:</span>
+          <span class="font-bold text-red-400">画面をタップ/クリック</span>
+        </div>
+        <div class="flex items-center justify-between text-amber-100">
+          <span class="flex items-center gap-2"><i class="fa-solid fa-wrench text-emerald-400"></i> 修理キット:</span>
+          <span class="font-bold text-emerald-400">緑のクロス（スパナ）で修復</span>
+        </div>
+      </div>
+
+      <button id="start-btn" class="pointer-events-auto w-full btn-cyber py-4 text-xl font-black font-orbitron tracking-wider text-amber-100 rounded-xl cursor-pointer">
+        TAKE OFF
+      </button>
+    </div>
+  </div>
+
+  <!-- Game Over Screen Overlay -->
+  <div id="gameover-screen" class="absolute inset-0 z-30 hidden flex items-center justify-center bg-slate-950/85 backdrop-blur-md">
+    <div class="glass-panel max-w-md w-11/12 p-8 rounded-3xl text-center border-red-500/40 relative">
+      <h2 class="text-4xl font-black font-orbitron text-red-500 glow-red mb-1">CRASHED!</h2>
+      <p class="text-gray-400 text-xs tracking-widest uppercase mb-6">機体が限界耐久値を超えて破壊されました</p>
+
+      <div class="bg-black/50 p-4 rounded-2xl border border-white/10 mb-6 space-y-3">
+        <div class="flex justify-between items-center">
+          <span class="text-gray-400">FINAL SCORE</span>
+          <span id="final-score" class="text-3xl font-black font-orbitron text-sky-400">0</span>
+        </div>
+        <div class="h-px bg-white/10"></div>
+        <div class="flex justify-between items-center">
+          <span class="text-gray-400">MAX SPEED</span>
+          <span id="final-speed" class="text-xl font-bold font-orbitron text-emerald-400">0 KM/H</span>
+        </div>
+        <div class="flex justify-between items-center">
+          <span class="text-gray-400">HIGH SCORE</span>
+          <span id="high-score-go" class="text-xl font-bold font-orbitron text-amber-400">0</span>
+        </div>
+      </div>
+
+      <button id="restart-btn" class="pointer-events-auto w-full btn-cyber py-4 text-xl font-black font-orbitron tracking-wider text-slate-950 rounded-xl cursor-pointer">
+        RETRY FLIGHT
+      </button>
+    </div>
+  </div>
+
+  <!-- JavaScript Code -->
+  <script>
+    /* Web Audio API Sound Engine */
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContext();
+        }
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      playRingSound() {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(523.25, now);
+        osc.frequency.setValueAtTime(659.25, now + 0.08);
+        osc.frequency.setValueAtTime(1046.50, now + 0.16);
+
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.35);
+      }
+
+      playHealSound() {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(440, now);
+        osc.frequency.setValueAtTime(554.37, now + 0.1);
+        osc.frequency.setValueAtTime(659.25, now + 0.2);
+        osc.frequency.setValueAtTime(880, now + 0.3);
+
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.5);
+      }
+
+      playHitSound() {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(180, now);
+        osc.frequency.exponentialRampToValueAtTime(40, now + 0.25);
+
+        gain.gain.setValueAtTime(0.25, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.25);
+      }
+
+      playExplosionSound() {
+        if (!this.ctx) return;
+        const bufferSize = this.ctx.sampleRate * 0.6;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        
+        for (let i = 0; i < bufferSize; i++) {
+          data[i] = Math.random() * 2 - 1;
+        }
+
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(800, this.ctx.currentTime);
+        filter.frequency.linearRampToValueAtTime(30, this.ctx.currentTime + 0.6);
+
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(0.6, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.6);
+
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        noise.start();
+        noise.stop(this.ctx.currentTime + 0.6);
+      }
+    }
+
+    /* 3D Earth Flight Game Engine */
+    class EarthRunnerGame {
+      constructor() {
+        this.container = document.getElementById('game-container');
+        this.speedLinesCanvas = document.getElementById('speed-lines-canvas');
+        this.speedLinesCtx = this.speedLinesCanvas.getContext('2d');
+
+        this.sound = new SoundEngine();
+
+        // Game State & HP
+        this.isRunning = false;
+        this.score = 0;
+        this.distance = 0;
+        this.maxHp = 100;
+        this.hp = this.maxHp;
+        this.highScore = localStorage.getItem('earth_runner_highscore') || 0;
+
+        // Stage System: Porco Rosso Style Italian Adriatic Sea & Countryside
+        this.stages = [
+          { name: 'Adriatic Coast (アドリア海)', skyColor: 0x38bdf8, fogColor: 0x93c5fd, groundColor: 0x0284c7, type: 'ocean' },
+          { name: 'Hotel Adriano Cove (ホテル・アドリアーノの入江)', skyColor: 0xfde047, fogColor: 0xfef08a, groundColor: 0x15803d, type: 'village' },
+          { name: 'Sunset Desert Cliffs (夕暮れの隠れ家)', skyColor: 0xea580c, fogColor: 0xfdba74, groundColor: 0x9a3412, type: 'canyon' },
+          { name: 'Milano Waterways (ミラノの運河)', skyColor: 0x1e1b4b, fogColor: 0x4338ca, groundColor: 0x0f172a, type: 'city' }
+        ];
+        this.currentStageIndex = 0;
+        this.nextStageDistance = 300;
+
+        // Speed Progression (Ultra Slow & Relaxing Scenic Cruise Flight)
+        this.startSpeed = 0.015; // さらに超低速でスタート
+        this.currentSpeed = this.startSpeed;
+        this.maxSpeed = 0.08; // 最高速度もさらに極力落として超スローな悠々空の旅に
+        this.accelerationRate = 0.000003; // 加速も極めてゆるやかに
+
+        // Flight Bounds
+        this.bounds = { x: 10, y: 5.5 };
+
+        // Mouse Normalized Coordinates (-1 to 1)
+        this.mousePos = { x: 0, y: 0 };
+        this.targetPlayerPos = { x: 0, y: 0 };
+
+        // Collections
+        this.obstacles = [];
+        this.healItems = [];
+        this.particles = [];
+        this.clouds = [];
+        this.groundSegments = [];
+
+        // Camera Spec
+        this.baseFov = 60;
+        this.targetFov = 60;
+
+        // HUD Elements
+        this.startScreen = document.getElementById('start-screen');
+        this.gameoverScreen = document.getElementById('gameover-screen');
+        this.hudBar = document.getElementById('hud-bar');
+        this.hpBar = document.getElementById('hp-bar');
+        this.hpVal = document.getElementById('hp-val');
+        this.scoreVal = document.getElementById('score-val');
+        this.speedVal = document.getElementById('speed-val');
+        this.distVal = document.getElementById('dist-val');
+        this.highScoreHud = document.getElementById('high-score-hud');
+        this.finalScore = document.getElementById('final-score');
+        this.finalSpeed = document.getElementById('final-speed');
+        this.highScoreGo = document.getElementById('high-score-go');
+
+        this.highScoreHud.textContent = Math.floor(this.highScore);
+
+        this.initThree();
+        this.createPlayer();
+        this.createEnvironment();
+        this.setupEvents();
+
+        this.animate = this.animate.bind(this);
+        requestAnimationFrame(this.animate);
+      }
+
+      /* Three.js Initial Setup */
+      initThree() {
+        this.scene = new THREE.Scene();
+        const stage = this.stages[this.currentStageIndex];
+        this.scene.background = new THREE.Color(stage.skyColor);
+        this.scene.fog = new THREE.FogExp2(stage.fogColor, 0.008);
+
+        this.camera = new THREE.PerspectiveCamera(this.baseFov, window.innerWidth / window.innerHeight, 0.1, 1000);
+        this.camera.position.set(0, 2.5, 9);
+        this.camera.lookAt(0, 0, -10);
+
+        this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        this.renderer.shadowMap.enabled = true;
+        this.container.appendChild(this.renderer.domElement);
+
+        // Lighting (Vintage Warm Sunset / Daylight)
+        const ambientLight = new THREE.AmbientLight(0xfff7ed, 0.7);
+        this.scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xfef08a, 1.2);
+        dirLight.position.set(30, 50, 20);
+        dirLight.castShadow = true;
+        this.scene.add(dirLight);
+
+        this.resizeCanvas();
+      }
+
+      /* Crimson Pig Style Seaplane (Savoia S.21 Style Biplane) */
+      createPlayer() {
+        this.playerGroup = new THREE.Group();
+
+        // Main Red Fuselage (飛行艇の赤い艇体 - より丸みを持たせたクラシックフォルム)
+        const bodyGeo = new THREE.CylinderGeometry(0.38, 0.22, 3.0, 16);
+        const redMat = new THREE.MeshStandardMaterial({ color: 0xc2410c, roughness: 0.25, metalness: 0.3 });
+        const body = new THREE.Mesh(bodyGeo, redMat);
+        body.rotation.x = Math.PI / 2;
+        this.playerGroup.add(body);
+
+        // White/Cream Belly (艇底のポルコ機特有のクリームホワイト)
+        const bellyGeo = new THREE.CylinderGeometry(0.36, 0.20, 2.8, 16, 1, false, 0, Math.PI);
+        const creamMat = new THREE.MeshStandardMaterial({ color: 0xfffbeb, roughness: 0.6 });
+        const belly = new THREE.Mesh(bellyGeo, creamMat);
+        belly.rotation.x = Math.PI / 2;
+        belly.rotation.z = Math.PI;
+        belly.position.y = -0.04;
+        this.playerGroup.add(belly);
+
+        // Main Wings (黄色＆赤い鮮やかな木製複葉翼)
+        const wingGeo = new THREE.BoxGeometry(4.2, 0.07, 0.75);
+        const yellowWingMat = new THREE.MeshStandardMaterial({ color: 0xeab308, roughness: 0.4 });
+        
+        const mainWing = new THREE.Mesh(wingGeo, yellowWingMat);
+        mainWing.position.set(0, 0.45, -0.1);
+        this.playerGroup.add(mainWing);
+
+        // Italian Tricolor Flags on Wings (イタリア国旗のトリコロール)
+        const flagGeo = new THREE.BoxGeometry(0.7, 0.08, 0.73);
+        const greenMat = new THREE.MeshStandardMaterial({ color: 0x15803d });
+        const flag = new THREE.Mesh(flagGeo, greenMat);
+        flag.position.set(1.4, 0.45, -0.1);
+        this.playerGroup.add(flag);
+
+        // Top Mounted V12 Engine Pod (背上のイソッタ・フラスキーニ水冷エンジン)
+        const enginePodGeo = new THREE.CylinderGeometry(0.3, 0.26, 1.2, 12);
+        const darkMetalMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.2, metalness: 0.85 });
+        const enginePod = new THREE.Mesh(enginePodGeo, darkMetalMat);
+        enginePod.rotation.x = Math.PI / 2;
+        enginePod.position.set(0, 0.95, 0.1);
+        this.playerGroup.add(enginePod);
+
+        // Wooden Propeller (2枚羽根のヴィンテージ木製プロペラ)
+        const propGeo = new THREE.BoxGeometry(1.6, 0.12, 0.05);
+        const woodMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.6 });
+        this.propeller = new THREE.Mesh(propGeo, woodMat);
+        this.propeller.position.set(0, 0.95, -0.55);
+        this.playerGroup.add(this.propeller);
+
+        // Tail Fin with R - Pig Logo Area (垂直尾翼)
+        const tailGeo = new THREE.BoxGeometry(0.06, 0.9, 0.7);
+        const tail = new THREE.Mesh(tailGeo, redMat);
+        tail.position.set(0, 0.55, 1.3);
+        this.playerGroup.add(tail);
+
+        this.scene.add(this.playerGroup);
+      }
+
+      /* Infinite Terrain & Environment Setup */
+      createEnvironment() {
+        const segGeo = new THREE.PlaneGeometry(120, 300, 32, 32);
+        segGeo.rotateX(-Math.PI / 2);
+
+        const stage = this.stages[this.currentStageIndex];
+        this.segmentMat = new THREE.MeshStandardMaterial({
+          color: stage.groundColor,
+          roughness: 0.8,
+          flatShading: true
+        });
+
+        for (let i = 0; i < 2; i++) {
+          const terrain = new THREE.Mesh(segGeo, this.segmentMat);
+          terrain.position.z = -i * 150;
+
+          const pos = terrain.geometry.attributes.position;
+          for (let j = 0; j < pos.count; j++) {
+            const vx = pos.getX(j);
+            if (Math.abs(vx) > 18) {
+              const vz = pos.getZ(j);
+              const height = Math.sin(vx * 0.1) * Math.cos(vz * 0.1) * 8 + (Math.abs(vx) - 18) * 0.5;
+              pos.setY(j, height);
+            }
+          }
+          terrain.geometry.computeVertexNormals();
+
+          this.scene.add(terrain);
+          this.groundSegments.push(terrain);
+        }
+
+        for (let i = 0; i < 25; i++) {
+          this.spawnCloud(-300 + Math.random() * 300);
+        }
+      }
+
+      spawnCloud(zPos) {
+        const cloud = new THREE.Group();
+        const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, transparent: true, opacity: 0.85 });
+
+        const parts = 3 + Math.floor(Math.random() * 3);
+        for (let i = 0; i < parts; i++) {
+          const geo = new THREE.DodecahedronGeometry(2 + Math.random() * 2, 1);
+          const p = new THREE.Mesh(geo, mat);
+          p.position.set(
+            (Math.random() - 0.5) * 3,
+            (Math.random() - 0.5) * 1.5,
+            (Math.random() - 0.5) * 3
+          );
+          cloud.add(p);
+        }
+
+        const side = Math.random() > 0.5 ? 1 : -1;
+        cloud.position.set(
+          side * (25 + Math.random() * 45),
+          8 + Math.random() * 15,
+          zPos || -250
+        );
+
+        this.scene.add(cloud);
+        this.clouds.push(cloud);
+      }
+
+      setupEvents() {
+        window.addEventListener('resize', () => {
+          this.resizeCanvas();
+        });
+
+        const updatePosition = (clientX, clientY) => {
+          this.mousePos.x = (clientX / window.innerWidth) * 2 - 1;
+          this.mousePos.y = -(clientY / window.innerHeight) * 2 + 1;
+        };
+
+        window.addEventListener('mousemove', (e) => {
+          updatePosition(e.clientX, e.clientY);
+        });
+
+        // タッチ操作（スワイプ・ドラッグ）対応と画面スクロール防止
+        const handleTouch = (e) => {
+          if (e.touches.length > 0) {
+            updatePosition(e.touches[0].clientX, e.touches[0].clientY);
+          }
+        };
+
+        window.addEventListener('touchstart', (e) => {
+          handleTouch(e);
+          if (!this.isRunning && !e.target.closest('button')) {
+            this.startGame();
+          }
+        }, { passive: false });
+
+        window.addEventListener('touchmove', (e) => {
+          if (this.isRunning) {
+            e.preventDefault(); // ゲームプレイ中のブラウザスクロールを防止
+          }
+          handleTouch(e);
+        }, { passive: false });
+
+        const startBtn = document.getElementById('start-btn');
+        const restartBtn = document.getElementById('restart-btn');
+
+        startBtn.addEventListener('click', () => this.startGame());
+        restartBtn.addEventListener('click', () => this.startGame());
+
+        window.addEventListener('click', (e) => {
+          if (!this.isRunning && !e.target.closest('button')) {
+            this.startGame();
+          }
+        });
+      }
+
+      resizeCanvas() {
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+
+        this.camera.aspect = width / height;
+        this.camera.updateProjectionMatrix();
+
+        this.renderer.setSize(width, height);
+
+        this.speedLinesCanvas.width = width;
+        this.speedLinesCanvas.height = height;
+      }
+
+      startGame() {
+        this.sound.init();
+
+        this.obstacles.forEach(obs => this.scene.remove(obs));
+        this.healItems.forEach(item => this.scene.remove(item));
+        this.particles.forEach(p => this.scene.remove(p));
+        this.obstacles = [];
+        this.healItems = [];
+        this.particles = [];
+
+        this.score = 0;
+        this.distance = 0;
+        this.hp = this.maxHp;
+        this.updateHpUI();
+
+        this.currentStageIndex = 0;
+        this.nextStageDistance = 300;
+        this.applyStageTheme(this.stages[0], false);
+
+        this.currentSpeed = this.startSpeed;
+
+        this.playerGroup.position.set(0, 0, 0);
+        this.playerGroup.rotation.set(0, 0, 0);
+        this.playerGroup.visible = true;
+
+        this.isRunning = true;
+
+        this.startScreen.classList.add('opacity-0', 'pointer-events-none');
+        setTimeout(() => this.startScreen.classList.add('hidden'), 500);
+
+        this.gameoverScreen.classList.add('hidden');
+        this.hudBar.classList.remove('opacity-0');
+      }
+
+      checkStageProgression() {
+        if (this.distance >= this.nextStageDistance) {
+          this.currentStageIndex = (this.currentStageIndex + 1) % this.stages.length;
+          const stage = this.stages[this.currentStageIndex];
+          this.nextStageDistance += 350 + this.currentStageIndex * 100;
+          this.applyStageTheme(stage, true);
+        }
+      }
+
+      applyStageTheme(stage, transition) {
+        this.scene.background = new THREE.Color(stage.skyColor);
+        this.scene.fog.color = new THREE.Color(stage.fogColor);
+        if (this.segmentMat) {
+          this.segmentMat.color.setHex(stage.groundColor);
+        }
+      }
+
+      spawnObstacle() {
+        if (Math.random() > 0.04) return;
+
+        const stage = this.stages[this.currentStageIndex];
+        const group = new THREE.Group();
+
+        // 危険マーカー (赤い警告ライト/枠) 用のマテリアル
+        const warningMat = new THREE.MeshStandardMaterial({ 
+          color: 0xef4444, 
+          emissive: 0xdc2626, 
+          emissiveIntensity: 0.8 
+        });
+
+        let mat, geo;
+        let yPos = 0; // デフォルト高度
+
+        if (stage.type === 'ocean') {
+          if (Math.random() > 0.4) {
+            // 敵の飛空艇（空中に浮かべる）
+            geo = new THREE.BoxGeometry(3.0, 1.0, 4.0);
+            mat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.4 });
+            const airship = new THREE.Mesh(geo, mat);
+            
+            // 主翼の追加（飛空艇らしく）
+            const wing = new THREE.Mesh(new THREE.BoxGeometry(6.0, 0.1, 1.2), mat);
+            wing.position.y = 0.3;
+            airship.add(wing);
+
+            group.add(airship);
+
+            // 飛空艇上部の赤色警告ランプ
+            const beacon = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.6), warningMat);
+            beacon.position.set(0, 0.8, 0);
+            group.add(beacon);
+
+            // 空中（自機の飛行高度範囲）に配置
+            yPos = (Math.random() - 0.5) * (this.bounds.y * 1.2);
+          } else {
+            // 孤島の岩山（地面からの障害物）
+            geo = new THREE.DodecahedronGeometry(2.2, 1);
+            mat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.9 });
+            const rock = new THREE.Mesh(geo, mat);
+            rock.position.y = -4.5;
+            group.add(rock);
+            yPos = 0;
+          }
+        } else if (stage.type === 'village') {
+          if (Math.random() > 0.5) {
+            // 空賊機（空中の敵機）
+            geo = new THREE.BoxGeometry(2.5, 0.8, 3.2);
+            mat = new THREE.MeshStandardMaterial({ color: 0x991b1b, roughness: 0.5 });
+            const plane = new THREE.Mesh(geo, mat);
+            
+            const wing = new THREE.Mesh(new THREE.BoxGeometry(5.0, 0.1, 0.8), mat);
+            wing.position.y = 0.2;
+            plane.add(wing);
+
+            group.add(plane);
+
+            const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 8), warningMat);
+            beacon.position.set(0, 0.6, 0);
+            group.add(beacon);
+
+            yPos = (Math.random() - 0.5) * (this.bounds.y * 1.2);
+          } else {
+            // 地上の民家・風車
+            geo = new THREE.BoxGeometry(2.2, 3.5, 2.2);
+            mat = new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.7 });
+            const house = new THREE.Mesh(geo, mat);
+            house.position.y = -4.2;
+            group.add(house);
+
+            const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.25, 8, 8), warningMat);
+            beacon.position.set(0, -2.2, 0);
+            group.add(beacon);
+            yPos = 0;
+          }
+        } else if (stage.type === 'city') {
+          // 高層ビル
+          const h = 6 + Math.random() * 8;
+          geo = new THREE.BoxGeometry(3, h, 3);
+          mat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.3 });
+          const bldg = new THREE.Mesh(geo, mat);
+          bldg.position.y = -6 + h / 2;
+          group.add(bldg);
+
+          const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 8), warningMat);
+          beacon.position.set(0, -6 + h + 0.3, 0);
+          group.add(beacon);
+          yPos = 0;
+        } else {
+          // 山岳の針葉樹・岩山
+          geo = new THREE.ConeGeometry(2, 7, 6);
+          mat = new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.8 });
+          const tree = new THREE.Mesh(geo, mat);
+          tree.position.y = -2.5;
+          group.add(tree);
+          yPos = 0;
+        }
+
+        const xPos = (Math.random() - 0.5) * (this.bounds.x * 1.8);
+        group.position.set(xPos, yPos, -180);
+        this.scene.add(group);
+        this.obstacles.push(group);
+      }
+
+      spawnHealItem() {
+        if (Math.random() > 0.02) return;
+
+        const group = new THREE.Group();
+
+        // 強調表示用：鮮やかに発光するグリーンマテリアル
+        const greenMat = new THREE.MeshStandardMaterial({ 
+          color: 0x22c55e, 
+          roughness: 0.2, 
+          emissive: 0x16a34a, 
+          emissiveIntensity: 0.9 
+        });
+
+        // 立体クロス（救急マーク）
+        const bar1 = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.45, 0.45), greenMat);
+        const bar2 = new THREE.Mesh(new THREE.BoxGeometry(0.45, 1.6, 0.45), greenMat);
+        group.add(bar1);
+        group.add(bar2);
+
+        // 外周の緑色オーラ球体（ひと目で回復と認識できる演出）
+        const auraGeo = new THREE.SphereGeometry(1.3, 16, 16);
+        const auraMat = new THREE.MeshBasicMaterial({ 
+          color: 0x4ade80, 
+          transparent: true, 
+          opacity: 0.35, 
+          wireframe: true 
+        });
+        const aura = new THREE.Mesh(auraGeo, auraMat);
+        group.add(aura);
+
+        const xPos = (Math.random() - 0.5) * (this.bounds.x * 1.5);
+        const yPos = (Math.random() - 0.5) * (this.bounds.y * 1.3);
+
+        group.position.set(xPos, yPos, -180);
+        this.scene.add(group);
+        this.healItems.push(group);
+      }
+
+      spawnEngineParticle() {
+        const geo = new THREE.SphereGeometry(0.12, 6, 6);
+        const mat = new THREE.MeshBasicMaterial({ color: 0xfef08a, transparent: true, opacity: 0.8 });
+        const p = new THREE.Mesh(geo, mat);
+
+        p.position.copy(this.playerGroup.position);
+        p.position.z += 1.4;
+        p.position.x += (Math.random() - 0.5) * 0.2;
+        p.position.y += (Math.random() - 0.5) * 0.2;
+
+        this.scene.add(p);
+        this.particles.push({ mesh: p, life: 1.0 });
+      }
+
+      updateHpUI() {
+        const pct = Math.max(0, Math.floor((this.hp / this.maxHp) * 100));
+        this.hpVal.textContent = `${pct}%`;
+        this.hpBar.style.width = `${pct}%`;
+
+        if (pct < 30) {
+          this.hpBar.className = "h-full bg-red-600 rounded-full transition-all duration-300 shadow-[0_0_12px_rgba(239,68,68,0.8)]";
+        } else {
+          this.hpBar.className = "h-full bg-gradient-to-r from-red-600 via-amber-400 to-emerald-400 rounded-full transition-all duration-300 shadow-[0_0_10px_rgba(245,158,11,0.5)]";
+        }
+      }
+
+      takeDamage(amount) {
+        this.hp -= amount;
+        this.sound.playHitSound();
+        this.updateHpUI();
+
+        if (this.hp <= 0) {
+          this.gameOver();
+        }
+      }
+
+      heal(amount) {
+        this.hp = Math.min(this.maxHp, this.hp + amount);
+        this.sound.playHealSound();
+        this.updateHpUI();
+      }
+
+      gameOver() {
+        this.isRunning = false;
+        this.sound.playExplosionSound();
+
+        if (this.score > this.highScore) {
+          this.highScore = this.score;
+          localStorage.setItem('earth_runner_highscore', this.highScore);
+          this.highScoreHud.textContent = Math.floor(this.highScore);
+        }
+
+        this.finalScore.textContent = Math.floor(this.score);
+        this.finalSpeed.textContent = `${Math.floor(this.currentSpeed * 240)} KNOTS`;
+        this.highScoreGo.textContent = Math.floor(this.highScore);
+
+        this.playerGroup.visible = false;
+        this.gameoverScreen.classList.remove('hidden');
+      }
+
+      animate() {
+        requestAnimationFrame(this.animate);
+
+        if (this.isRunning) {
+          // Speed Curve Acceleration
+          if (this.currentSpeed < this.maxSpeed) {
+            this.currentSpeed += this.accelerationRate;
+          }
+
+          this.distance += this.currentSpeed * 2;
+          this.score += this.currentSpeed * 0.8;
+
+          this.checkStageProgression();
+
+          // Target Mouse Position Smooth Flight (Ultra smooth & heavy vintage seaplane inertia)
+          this.targetPlayerPos.x = this.mousePos.x * this.bounds.x;
+          this.targetPlayerPos.y = this.mousePos.y * this.bounds.y;
+
+          this.playerGroup.position.x += (this.targetPlayerPos.x - this.playerGroup.position.x) * 0.02;
+          this.playerGroup.position.y += (this.targetPlayerPos.y - this.playerGroup.position.y) * 0.02;
+
+          // Aircraft Roll & Pitch Angles (Gentle Bank Animations)
+          const bankZ = -(this.targetPlayerPos.x - this.playerGroup.position.x) * 0.08;
+          const pitchX = (this.targetPlayerPos.y - this.playerGroup.position.y) * 0.05;
+
+          this.playerGroup.rotation.z = bankZ;
+          this.playerGroup.rotation.x = pitchX;
+
+          // Rotate Propeller
+          if (this.propeller) {
+            this.propeller.rotation.z += 0.15 + this.currentSpeed;
+          }
+
+          // Camera Dynamic FOV & Speed Effect
+          this.targetFov = this.baseFov + (this.currentSpeed - this.startSpeed) * 2;
+          this.camera.fov += (this.targetFov - this.camera.fov) * 0.02;
+          this.camera.updateProjectionMatrix();
+
+          // Move Infinite Ground Segments
+          this.groundSegments.forEach(seg => {
+            seg.position.z += this.currentSpeed * 12;
+            if (seg.position.z > 50) {
+              seg.position.z -= 300;
+            }
+          });
+
+          // Clouds Movement
+          this.clouds.forEach(cloud => {
+            cloud.position.z += this.currentSpeed * 8;
+            if (cloud.position.z > 20) {
+              cloud.position.z = -280;
+              cloud.position.x = (Math.random() - 0.5) * 80;
+            }
+          });
+
+          // Engine Trails
+          if (Math.random() > 0.4) {
+            this.spawnEngineParticle();
+          }
+
+          // Spawn Game Items & Obstacles
+          this.spawnObstacle();
+          this.spawnHealItem();
+
+          // Update Particles
+          for (let i = this.particles.length - 1; i >= 0; i--) {
+            const p = this.particles[i];
+            p.life -= 0.03;
+            p.mesh.scale.multiplyScalar(0.95);
+            p.mesh.position.z += 0.4;
+
+            if (p.life <= 0) {
+              this.scene.remove(p.mesh);
+              this.particles.splice(i, 1);
+            }
+          }
+
+          // Update & Collision Check - Obstacles
+          for (let i = this.obstacles.length - 1; i >= 0; i--) {
+            const obs = this.obstacles[i];
+            obs.position.z += this.currentSpeed * 12;
+
+            const dist = this.playerGroup.position.distanceTo(obs.position);
+            if (dist < 2.3) {
+              this.scene.remove(obs);
+              this.obstacles.splice(i, 1);
+              this.takeDamage(25);
+              continue;
+            }
+
+            if (obs.position.z > 20) {
+              this.scene.remove(obs);
+              this.obstacles.splice(i, 1);
+            }
+          }
+
+          // Update & Collision Check - Repair Kits
+          for (let i = this.healItems.length - 1; i >= 0; i--) {
+            const item = this.healItems[i];
+            item.position.z += this.currentSpeed * 12;
+            // 回復アイテムを印象的に回転・浮遊
+            item.rotation.z += 0.03;
+            item.rotation.y += 0.02;
+
+            const dist = this.playerGroup.position.distanceTo(item.position);
+            if (dist < 2.2) {
+              this.scene.remove(item);
+              this.healItems.splice(i, 1);
+              this.heal(30);
+              continue;
+            }
+
+            if (item.position.z > 20) {
+              this.scene.remove(item);
+              this.healItems.splice(i, 1);
+            }
+          }
+
+          // Update HUD
+          this.scoreVal.textContent = Math.floor(this.score);
+          this.distVal.textContent = Math.floor(this.distance);
+          this.speedVal.innerHTML = `${Math.floor(this.currentSpeed * 800)} <span class="text-xs">KNOTS</span>`;
+        }
+
+        this.renderer.render(this.scene, this.camera);
+      }
+    }
+
+    // Initialize Game Engine on Window Load
+    window.onload = () => {
+      new EarthRunnerGame();
+    };
+  </script>
+</body>
+</html>

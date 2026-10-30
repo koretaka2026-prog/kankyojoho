@@ -1,0 +1,1156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Super Mario Odyssey 3D Web Edition</title>
+    <!-- Tailwind CSS for UI styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js for 3D rendering -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            user-select: none;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #000;
+        }
+
+        #canvas-container {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        /* Odyssey Style UI */
+        .odyssey-counter {
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(8px);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        .moon-banner {
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0.5) translateY(50px); opacity: 0; }
+            100% { transform: scale(1) translateY(0); opacity: 1; }
+        }
+
+        @keyframes shine {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+
+        .shine-text {
+            background: linear-gradient(90deg, #ffe066, #ffffff, #ffe066);
+            background-size: 200% auto;
+            color: #000;
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: shine 3s linear infinite;
+        }
+
+        /* Crosshair/Targeting */
+        .crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 12px;
+            height: 12px;
+            border: 2px solid rgba(255, 255, 255, 0.6);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        /* Mobile Controls */
+        .touch-btn {
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(4px);
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            active:bg-white/50;
+        }
+    </style>
+</head>
+<body class="relative">
+
+    <!-- 3D Canvas -->
+    <div id="canvas-container"></div>
+
+    <!-- UI Overlay -->
+    <div id="ui-layer" class="absolute inset-0 z-10 pointer-events-none flex flex-col justify-between p-4 sm:p-6">
+        
+        <!-- Top Stats Bar -->
+        <div class="flex justify-between items-start w-full max-w-4xl mx-auto">
+            
+            <!-- Moons & Coins Counters -->
+            <div class="flex gap-3 sm:gap-4">
+                <!-- Moon Counter -->
+                <div class="odyssey-counter flex items-center gap-3 px-4 py-2 rounded-full text-white">
+                    <i class="fa-solid fa-moon text-yellow-300 text-2xl filter drop-shadow-[0_0_8px_rgba(253,224,71,0.8)]"></i>
+                    <span id="moon-count" class="font-extrabold text-2xl tracking-wider">0</span>
+                    <span class="text-xs text-yellow-200/70 font-semibold uppercase">/ 3</span>
+                </div>
+
+                <!-- Coin Counter -->
+                <div class="odyssey-counter flex items-center gap-3 px-4 py-2 rounded-full text-white">
+                    <i class="fa-solid fa-coins text-amber-400 text-2xl filter drop-shadow-[0_0_8px_rgba(251,191,36,0.8)]"></i>
+                    <span id="coin-count" class="font-extrabold text-2xl tracking-wider">00</span>
+                </div>
+            </div>
+
+            <!-- Odyssey Launch Status -->
+            <div id="ship-status-container" class="odyssey-counter px-4 py-2 rounded-2xl text-white text-right hidden sm:block">
+                <div class="text-xs text-gray-300 font-bold uppercase tracking-wider">Odyssey Power Status</div>
+                <div id="ship-status" class="text-sm font-extrabold text-yellow-400">Needs 3 Moons to Fly!</div>
+            </div>
+        </div>
+
+        <!-- Capture Indicator Banner -->
+        <div id="capture-badge" class="self-center hidden bg-gradient-to-r from-red-600 to-amber-500 text-white font-black px-6 py-2 rounded-full shadow-lg border-2 border-white text-lg tracking-wider transform -translate-y-12 animate-bounce">
+            CAPTURED: <span id="captured-name">GOOMBA</span> (Press Q to release)
+        </div>
+
+        <!-- Controls Guide (Desktop Overlay) -->
+        <div class="hidden md:flex justify-between items-end w-full max-w-5xl mx-auto text-white/80 text-xs font-semibold">
+            <div class="odyssey-counter p-3 rounded-xl flex gap-4">
+                <div><span class="bg-white/20 px-2 py-1 rounded text-white font-bold">WASD</span> Move</div>
+                <div><span class="bg-white/20 px-2 py-1 rounded text-white font-bold">SPACE</span> Jump</div>
+                <div><span class="bg-white/20 px-2 py-1 rounded text-white font-bold">E / SHIFT</span> Throw Cappy</div>
+                <div><span class="bg-white/20 px-2 py-1 rounded text-white font-bold">Q</span> Uncapture</div>
+                <div><span class="bg-white/20 px-2 py-1 rounded text-white font-bold">Mouse</span> Rotate Camera</div>
+            </div>
+            <div class="text-right text-white/60">
+                <p>Jump on Cappy while spinning for a Super Jump!</p>
+            </div>
+        </div>
+
+        <!-- Mobile Controls Overlay -->
+        <div class="md:hidden pointer-events-auto flex justify-between items-end w-full mb-2">
+            <!-- Joystick Container / D-Pad -->
+            <div id="touch-joystick" class="w-32 h-32 rounded-full bg-white/10 border-2 border-white/30 relative flex items-center justify-center">
+                <div id="joystick-knob" class="w-12 h-12 rounded-full bg-white/50 absolute"></div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex gap-3">
+                <button id="btn-uncapture" class="touch-btn w-12 h-12 rounded-full text-white font-bold text-xs flex items-center justify-center hidden">Q</button>
+                <button id="btn-cappy" class="touch-btn w-16 h-16 rounded-full text-white font-bold text-lg flex items-center justify-center shadow-lg"><i class="fa-solid fa-hat-wizard"></i></button>
+                <button id="btn-jump" class="touch-btn w-16 h-16 rounded-full text-white font-bold text-lg flex items-center justify-center shadow-lg"><i class="fa-solid fa-arrow-up"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Victory / Collect Moon Modal Banner -->
+    <div id="moon-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md hidden pointer-events-auto">
+        <div class="moon-banner odyssey-counter p-8 rounded-3xl max-w-md w-full text-center border-4 border-yellow-400 relative overflow-hidden">
+            <div class="absolute -top-10 -left-10 w-32 h-32 bg-yellow-400/20 rounded-full blur-xl"></div>
+            <i class="fa-solid fa-moon text-6xl text-yellow-300 mb-4 animate-spin" style="animation-duration: 8s;"></i>
+            <h2 class="text-xs uppercase font-extrabold tracking-widest text-yellow-400 mb-1">YOU GOT A</h2>
+            <h1 class="text-4xl font-black text-white mb-2 tracking-tight">POWER MOON!</h1>
+            <p id="moon-title" class="text-yellow-200/90 text-sm mb-6 font-medium">"Top of the Kingdom Cliff"</p>
+            <button id="btn-continue" class="w-full bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-300 hover:to-amber-400 text-slate-900 font-extrabold py-3 px-6 rounded-xl shadow-lg transform transition active:scale-95 pointer-events-auto">
+                GOT IT!
+            </button>
+        </div>
+    </div>
+
+    <!-- Win Screen Modal -->
+    <div id="win-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-lg hidden pointer-events-auto">
+        <div class="moon-banner odyssey-counter p-8 rounded-3xl max-w-lg w-full text-center border-4 border-amber-400 relative">
+            <i class="fa-solid fa-rocket text-6xl text-amber-400 mb-4"></i>
+            <h1 class="text-4xl font-black text-white mb-2">ODYSSEY IS POWERED UP!</h1>
+            <p class="text-gray-300 text-sm mb-6">Congratulations! You collected enough Power Moons to charge the airship and set sail for the next Kingdom!</p>
+            <button onclick="location.reload()" class="w-full bg-gradient-to-r from-red-500 to-amber-500 text-white font-extrabold py-3 px-6 rounded-xl shadow-lg hover:brightness-110 transition active:scale-95">
+                PLAY AGAIN
+            </button>
+        </div>
+    </div>
+
+    <!-- Game Logic Scripts -->
+    <script>
+        // --- AUDIO SYNTHESIZER (No external audio files needed) ---
+        class SoundFX {
+            constructor() {
+                this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            
+            playJump() {
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(400, this.ctx.currentTime + 0.15);
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.15);
+            }
+
+            playCoin() {
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(987.77, this.ctx.currentTime); // B5
+                osc.frequency.setValueAtTime(1318.51, this.ctx.currentTime + 0.08); // E6
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.3);
+            }
+
+            playCappy() {
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(600, this.ctx.currentTime + 0.1);
+                osc.frequency.linearRampToValueAtTime(300, this.ctx.currentTime + 0.25);
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.25);
+            }
+
+            playMoon() {
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+                const now = this.ctx.currentTime;
+                const notes = [523.25, 659.25, 783.99, 1046.50]; // C E G C
+                notes.forEach((freq, i) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0.3, now + i * 0.1);
+                    gain.gain.linearRampToValueAtTime(0.01, now + i * 0.1 + 0.4);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + i * 0.1);
+                    osc.stop(now + i * 0.1 + 0.4);
+                });
+            }
+
+            playCapture() {
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(200, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.3);
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.35);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.35);
+            }
+        }
+
+        const audio = new SoundFX();
+
+        // --- GAME ENGINE SETUP ---
+        let scene, camera, renderer;
+        let clock = new THREE.Clock();
+
+        // Game State Variables
+        let coinsCollected = 0;
+        let moonsCollected = 0;
+        const totalMoonsToWin = 3;
+        let isGamePaused = false;
+
+        // Player / Mechanics State
+        let playerGroup, marioMesh, capMesh;
+        let playerVelocity = new THREE.Vector3();
+        let isGrounded = false;
+        let playerRotationY = 0;
+        let playerSpeed = 12;
+        let jumpForce = 15;
+        let gravity = 32;
+
+        // Cappy Throw Mechanics
+        let cappyMesh;
+        let cappyState = 'idle'; // 'idle', 'throwing', 'spinning', 'returning'
+        let cappyPos = new THREE.Vector3();
+        let cappyVelocity = new THREE.Vector3();
+        let cappyTimer = 0;
+        const CAPPY_MAX_DIST = 9;
+        const CAPPY_SPEED = 28;
+
+        // Capture Mechanic State
+        let capturedObject = null; // null or reference to captured entity object
+        let capturedType = null;   // 'goomba'
+
+        // World Objects Lists for Collisions
+        let platforms = [];
+        let collectibles = [];
+        let captureables = [];
+
+        // Camera Controls
+        let cameraAngleX = 0;
+        let cameraAngleY = 0.3;
+        let cameraDistance = 14;
+        let isMouseDown = false;
+        let previousMousePosition = { x: 0, y: 0 };
+
+        // Input Handling
+        const keys = {};
+
+        // --- INITIALIZATION ---
+        function init() {
+            const container = document.getElementById('canvas-container');
+
+            // 1. Scene setup
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x60c8f8); // Bright Odyssey Sky Blue
+            scene.fog = new THREE.FogExp2(0x60c8f8, 0.008);
+
+            // 2. Camera setup
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+            // 3. Renderer setup
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
+
+            // 4. Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+
+            const sunLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            sunLight.position.set(40, 60, 20);
+            sunLight.castShadow = true;
+            sunLight.shadow.mapSize.width = 2048;
+            sunLight.shadow.mapSize.height = 2048;
+            sunLight.shadow.camera.near = 0.5;
+            sunLight.shadow.camera.far = 200;
+            const d = 50;
+            sunLight.shadow.camera.left = -d;
+            sunLight.shadow.camera.right = d;
+            sunLight.shadow.camera.top = d;
+            sunLight.shadow.camera.bottom = -d;
+            scene.add(sunLight);
+
+            // 5. Build Odyssey Kingdom World
+            buildWorld();
+
+            // 6. Build Character & Cappy
+            createPlayer();
+            createCappy();
+
+            // 7. Event Listeners
+            setupInputs();
+
+            // 8. Handle Window Resize
+            window.addEventListener('resize', onWindowResize);
+
+            // Start Game Loop
+            animate();
+        }
+
+        // --- PROCEDURAL MESH CREATORS ---
+
+        // Mario Character Model
+        function createPlayer() {
+            playerGroup = new THREE.Group();
+
+            // Mario Body (Red Shirt)
+            const bodyGeo = new THREE.CylinderGeometry(0.5, 0.4, 0.9, 12);
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0xe52521, roughness: 0.5 }); // Mario Red
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.position.y = 0.75;
+            body.castShadow = true;
+            playerGroup.add(body);
+
+            // Mario Overalls (Blue)
+            const overallsGeo = new THREE.BoxGeometry(0.9, 0.5, 0.7);
+            const overallsMat = new THREE.MeshStandardMaterial({ color: 0x0020b0, roughness: 0.6 }); // Mario Blue
+            const overalls = new THREE.Mesh(overallsGeo, overallsMat);
+            overalls.position.y = 0.55;
+            overalls.castShadow = true;
+            playerGroup.add(overalls);
+
+            // Head (Skin Tone)
+            const headGeo = new THREE.SphereGeometry(0.45, 16, 16);
+            const headMat = new THREE.MeshStandardMaterial({ color: 0xffcd94, roughness: 0.4 });
+            const head = new THREE.Mesh(headGeo, headMat);
+            head.position.y = 1.4;
+            head.castShadow = true;
+            playerGroup.add(head);
+
+            // Eyes / Nose
+            const noseGeo = new THREE.SphereGeometry(0.18, 12, 12);
+            const noseMat = new THREE.MeshStandardMaterial({ color: 0xffb878 });
+            const nose = new THREE.Mesh(noseGeo, noseMat);
+            nose.position.set(0, 1.4, 0.4);
+            playerGroup.add(nose);
+
+            // Mustache
+            const stacheGeo = new THREE.BoxGeometry(0.5, 0.1, 0.15);
+            const stacheMat = new THREE.MeshStandardMaterial({ color: 0x221100 });
+            const stache = new THREE.Mesh(stacheGeo, stacheMat);
+            stache.position.set(0, 1.3, 0.42);
+            playerGroup.add(stache);
+
+            // Mario Red Cap (on Head)
+            capMesh = createCapMesh();
+            capMesh.position.set(0, 1.7, 0.05);
+            capMesh.scale.set(1.1, 1.1, 1.1);
+            playerGroup.add(capMesh);
+
+            playerGroup.position.set(0, 2, 0);
+            scene.add(playerGroup);
+        }
+
+        // Cappy Mesh (Red Cap with Eyes)
+        function createCapMesh() {
+            const capGroup = new THREE.Group();
+
+            // Main Cap Crown
+            const crownGeo = new THREE.SphereGeometry(0.42, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.55);
+            const capMat = new THREE.MeshStandardMaterial({ color: 0xe52521, roughness: 0.3 });
+            const crown = new THREE.Mesh(crownGeo, capMat);
+            crown.castShadow = true;
+            capGroup.add(crown);
+
+            // Cap Brim
+            const brimGeo = new THREE.CylinderGeometry(0.65, 0.65, 0.05, 16);
+            const brim = new THREE.Mesh(brimGeo, capMat);
+            brim.position.set(0, 0.02, 0.15);
+            brim.castShadow = true;
+            capGroup.add(brim);
+
+            // White Emblem Logo Circle
+            const logoGeo = new THREE.CircleGeometry(0.15, 16);
+            const logoMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            const logo = new THREE.Mesh(logoGeo, logoMat);
+            logo.position.set(0, 0.25, 0.35);
+            logo.rotation.x = -0.4;
+            capGroup.add(logo);
+
+            // Cappy Eyes (Odyssey Signature)
+            const eyeGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.12, 8);
+            const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            const pupilMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+
+            const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+            leftEye.position.set(-0.15, 0.1, 0.58);
+            leftEye.rotation.z = -0.1;
+            capGroup.add(leftEye);
+
+            const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
+            rightEye.position.set(0.15, 0.1, 0.58);
+            rightEye.rotation.z = 0.1;
+            capGroup.add(rightEye);
+
+            return capGroup;
+        }
+
+        // Cappy Weapon Object (Thrown)
+        function createCappy() {
+            cappyMesh = createCapMesh();
+            cappyMesh.scale.set(1.2, 1.2, 1.2);
+            cappyMesh.visible = false;
+            scene.add(cappyMesh);
+        }
+
+        // --- WORLD GENERATION ---
+        function buildWorld() {
+            // Main Island Base Ground
+            createPlatform(0, -2, 0, 45, 4, 45, 0x48b02c); // Green Grass Island
+
+            // Odyssey Ship Landing Pad / Platform
+            createPlatform(-12, 0.5, -12, 12, 1, 12, 0x888888);
+            buildOdysseyShip(-12, 1, -12);
+
+            // Floating Platform Progression Path
+            createPlatform(0, 2, -15, 8, 1, 8, 0xd2b48c);
+            createPlatform(12, 5, -10, 6, 1, 6, 0xd2b48c);
+            createPlatform(18, 9, 0, 7, 1, 7, 0xd2b48c);
+
+            // High Summit Cliff Platform (Holds Moon #1)
+            createPlatform(0, 14, 15, 10, 1, 10, 0x8b5a2b);
+            // Steps leading up
+            createPlatform(0, 4, 5, 6, 1, 4, 0x8b5a2b);
+            createPlatform(0, 8, 9, 6, 1, 4, 0x8b5a2b);
+            createPlatform(0, 11, 12, 6, 1, 4, 0x8b5a2b);
+
+            // Side Island with Goombas (Holds Moon #2)
+            createPlatform(-18, 3, 10, 12, 1, 12, 0x48b02c);
+            // High post requiring Goomba Capture/Stack or Cappy Jump
+            createPlatform(-18, 10, 10, 3, 12, 3, 0x705030);
+
+            // Decorative Trees & Rocks
+            createTree(8, 0, 8);
+            createTree(-5, 0, 12);
+            createTree(15, 0, -5);
+
+            // --- SPARKLY COLLECTIBLES & ENEMIES ---
+
+            // Gold Coins
+            const coinPositions = [
+                [0, 1, -5], [2, 1, -5], [-2, 1, -5],
+                [0, 3, -15], [12, 6, -10], [18, 10, 0],
+                [-18, 4, 6], [-18, 4, 14]
+            ];
+            coinPositions.forEach(pos => createCoin(pos[0], pos[1], pos[2]));
+
+            // Power Moons (3 Objectives)
+            createPowerMoon(0, 16, 15, 'Top of the Kingdom Cliff', 1);
+            createPowerMoon(-18, 17, 10, 'High Pillar in the Meadow', 2);
+            createPowerMoon(18, 11, 0, 'Sky High Floating Platform', 3);
+
+            // Captureable Entities (Goombas)
+            createGoomba(-15, 3.5, 8);
+            createGoomba(-21, 3.5, 12);
+        }
+
+        function createPlatform(x, y, z, w, h, d, color) {
+            const geo = new THREE.BoxGeometry(w, h, d);
+            const mat = new THREE.MeshStandardMaterial({ 
+                color: color, 
+                roughness: 0.8,
+                metalness: 0.1 
+            });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.set(x, y, z);
+            mesh.receiveShadow = true;
+            mesh.castShadow = true;
+            scene.add(mesh);
+
+            // Store bounding box for simple collision physics
+            platforms.push({
+                mesh: mesh,
+                box: new THREE.Box3().setFromObject(mesh),
+                bounds: {
+                    minX: x - w / 2, maxX: x + w / 2,
+                    minY: y - h / 2, maxY: y + h / 2,
+                    minZ: z - d / 2, maxZ: z + d / 2
+                }
+            });
+        }
+
+        function createTree(x, y, z) {
+            const trunkGeo = new THREE.CylinderGeometry(0.3, 0.5, 3, 8);
+            const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5c4033 });
+            const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+            trunk.position.set(x, y + 1.5, z);
+            trunk.castShadow = true;
+            scene.add(trunk);
+
+            const leavesGeo = new THREE.DodecahedronGeometry(1.6);
+            const leavesMat = new THREE.MeshStandardMaterial({ color: 0x2e8b57, roughness: 0.6 });
+            const leaves = new THREE.Mesh(leavesGeo, leavesMat);
+            leaves.position.set(x, y + 3.5, z);
+            leaves.castShadow = true;
+            scene.add(leaves);
+        }
+
+        function createCoin(x, y, z) {
+            const group = new THREE.Group();
+            const geo = new THREE.CylinderGeometry(0.4, 0.4, 0.1, 16);
+            const mat = new THREE.MeshStandardMaterial({ 
+                color: 0xffd700, 
+                metalness: 0.8, 
+                roughness: 0.2,
+                emissive: 0xaa8800,
+                emissiveIntensity: 0.2
+            });
+            const coinMesh = new THREE.Mesh(geo, mat);
+            coinMesh.rotation.x = Math.PI / 2;
+            coinMesh.castShadow = true;
+            group.add(coinMesh);
+
+            group.position.set(x, y, z);
+            scene.add(group);
+
+            collectibles.push({ type: 'coin', group: group, mesh: coinMesh, collected: false });
+        }
+
+        function createPowerMoon(x, y, z, title, id) {
+            const group = new THREE.Group();
+
+            // Moon Crescent Mesh
+            const shape = new THREE.Shape();
+            shape.absarc(0, 0, 0.8, 0, Math.PI * 2, false);
+            const holePath = new THREE.Path();
+            holePath.absarc(0.3, 0.3, 0.75, 0, Math.PI * 2, true);
+            shape.holes.push(holePath);
+
+            const extrudeSettings = { depth: 0.3, bevelEnabled: true, bevelSegments: 3, steps: 1, bevelSize: 0.05, bevelThickness: 0.05 };
+            const geo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+            const mat = new THREE.MeshStandardMaterial({ 
+                color: 0xffea00, 
+                emissive: 0xffaa00, 
+                emissiveIntensity: 0.5,
+                roughness: 0.1,
+                metalness: 0.5
+            });
+            const moonMesh = new THREE.Mesh(geo, mat);
+            moonMesh.castShadow = true;
+            group.add(moonMesh);
+
+            // Moon Eyes
+            const eyeGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.35, 8);
+            const eyeMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+            const eye1 = new THREE.Mesh(eyeGeo, eyeMat);
+            eye1.position.set(-0.2, 0.1, 0.15);
+            eye1.rotation.x = Math.PI / 2;
+            group.add(eye1);
+
+            group.position.set(x, y, z);
+            scene.add(group);
+
+            collectibles.push({ type: 'moon', group: group, title: title, id: id, collected: false });
+        }
+
+        // Odyssey Airship Base Structure
+        function buildOdysseyShip(x, y, z) {
+            const shipGroup = new THREE.Group();
+
+            // Red Hat Globe Base
+            const baseGeo = new THREE.SphereGeometry(2.5, 16, 16, 0, Math.PI * 2, 0, Math.PI * 0.5);
+            const baseMat = new THREE.MeshStandardMaterial({ color: 0xdd2222, roughness: 0.3 });
+            const base = new THREE.Mesh(baseGeo, baseMat);
+            base.position.y = 1.2;
+            shipGroup.add(base);
+
+            // Gold Trim Ring
+            const ringGeo = new THREE.TorusGeometry(2.5, 0.2, 8, 24);
+            const ringMat = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.8, roughness: 0.2 });
+            const ring = new THREE.Mesh(ringGeo, ringMat);
+            ring.rotation.x = Math.PI / 2;
+            ring.position.y = 1.2;
+            shipGroup.add(ring);
+
+            // Propeller Sail Pole
+            const poleGeo = new THREE.CylinderGeometry(0.15, 0.15, 4, 8);
+            const poleMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.9 });
+            const pole = new THREE.Mesh(poleGeo, poleMat);
+            pole.position.y = 3.5;
+            shipGroup.add(pole);
+
+            // Top Globe Socket
+            const socketGeo = new THREE.SphereGeometry(0.8, 16, 16);
+            const socketMat = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.8 });
+            const socket = new THREE.Mesh(socketGeo, socketMat);
+            socket.position.y = 5.5;
+            shipGroup.add(socket);
+
+            shipGroup.position.set(x, y, z);
+            scene.add(shipGroup);
+        }
+
+        // Enemy / Capture Target Goomba
+        function createGoomba(x, y, z) {
+            const group = new THREE.Group();
+
+            // Head / Body (Brown Mushroom shape)
+            const bodyGeo = new THREE.SphereGeometry(0.7, 12, 12);
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0x8b4513, roughness: 0.7 });
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.scale.set(1, 0.9, 1);
+            body.position.y = 0.7;
+            body.castShadow = true;
+            group.add(body);
+
+            // Stem/Foot base
+            const stemGeo = new THREE.CylinderGeometry(0.35, 0.45, 0.4, 8);
+            const stemMat = new THREE.MeshStandardMaterial({ color: 0xffe4c4 });
+            const stem = new THREE.Mesh(stemGeo, stemMat);
+            stem.position.y = 0.2;
+            group.add(stem);
+
+            // Angry Eyes
+            const eyeGeo = new THREE.BoxGeometry(0.1, 0.25, 0.05);
+            const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            const pupilMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+
+            const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+            leftEye.position.set(-0.2, 0.75, 0.62);
+            leftEye.rotation.z = -0.2;
+            group.add(leftEye);
+
+            const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
+            rightEye.position.set(0.2, 0.75, 0.62);
+            rightEye.rotation.z = 0.2;
+            group.add(rightEye);
+
+            group.position.set(x, y, z);
+            scene.add(group);
+
+            captureables.push({
+                type: 'goomba',
+                group: group,
+                isCaptured: false,
+                homePos: new THREE.Vector3(x, y, z),
+                velocity: new THREE.Vector3(),
+                jumpHeight: 18 // High jump ability when captured!
+            });
+        }
+
+        // --- INPUT HANDLING ---
+        function setupInputs() {
+            window.addEventListener('keydown', (e) => {
+                keys[e.code] = true;
+                if (e.code === 'KeyE' || e.code === 'ShiftLeft') throwCappy();
+                if (e.code === 'KeyQ') uncapture();
+            });
+
+            window.addEventListener('keyup', (e) => {
+                keys[e.code] = false;
+            });
+
+            // Mouse Camera Controls
+            window.addEventListener('mousedown', (e) => {
+                if (e.button === 0 && !isGamePaused) {
+                    isMouseDown = true;
+                    previousMousePosition = { x: e.clientX, y: e.clientY };
+                }
+            });
+
+            window.addEventListener('mouseup', () => { isMouseDown = false; });
+
+            window.addEventListener('mousemove', (e) => {
+                if (!isMouseDown) return;
+                const deltaX = e.clientX - previousMousePosition.x;
+                const deltaY = e.clientY - previousMousePosition.y;
+
+                cameraAngleX -= deltaX * 0.005;
+                cameraAngleY = Math.max(0.1, Math.min(Math.PI / 2.2, cameraAngleY + deltaY * 0.005));
+
+                previousMousePosition = { x: e.clientX, y: e.clientY };
+            });
+
+            // Mobile Touch Joystick / Buttons
+            setupMobileControls();
+
+            // UI Buttons
+            document.getElementById('btn-continue').addEventListener('click', () => {
+                document.getElementById('moon-modal').classList.add('hidden');
+                isGamePaused = false;
+            });
+        }
+
+        function setupMobileControls() {
+            const btnJump = document.getElementById('btn-jump');
+            const btnCappy = document.getElementById('btn-cappy');
+            const btnUncapture = document.getElementById('btn-uncapture');
+
+            btnJump.addEventListener('touchstart', (e) => { e.preventDefault(); keys['Space'] = true; });
+            btnJump.addEventListener('touchend', (e) => { e.preventDefault(); keys['Space'] = false; });
+
+            btnCappy.addEventListener('touchstart', (e) => { e.preventDefault(); throwCappy(); });
+            btnUncapture.addEventListener('touchstart', (e) => { e.preventDefault(); uncapture(); });
+
+            // Touch Joystick logic
+            const joystick = document.getElementById('touch-joystick');
+            const knob = document.getElementById('joystick-knob');
+            let joyActive = false;
+
+            joystick.addEventListener('touchstart', (e) => { joyActive = true; handleTouch(e); });
+            joystick.addEventListener('touchmove', (e) => { if (joyActive) handleTouch(e); });
+            joystick.addEventListener('touchend', () => {
+                joyActive = false;
+                knob.style.transform = `translate(0px, 0px)`;
+                keys['KeyW'] = keys['KeyS'] = keys['KeyA'] = keys['KeyD'] = false;
+            });
+
+            function handleTouch(e) {
+                const rect = joystick.getBoundingClientRect();
+                const touch = e.touches[0];
+                const x = touch.clientX - rect.left - rect.width / 2;
+                const y = touch.clientY - rect.top - rect.height / 2;
+                const dist = Math.min(Math.hypot(x, y), 40);
+                const angle = Math.atan2(y, x);
+
+                const knobX = Math.cos(angle) * dist;
+                const knobY = Math.sin(angle) * dist;
+                knob.style.transform = `translate(${knobX}px, ${knobY}px)`;
+
+                keys['KeyW'] = y < -10;
+                keys['KeyS'] = y > 10;
+                keys['KeyA'] = x < -10;
+                keys['KeyD'] = x > 10;
+            }
+        }
+
+        // --- CAPPY MECHANIC LOGIC ---
+        function throwCappy() {
+            if (cappyState !== 'idle' || isGamePaused) return;
+
+            const activeEntity = capturedObject ? capturedObject.group : playerGroup;
+
+            cappyState = 'throwing';
+            cappyMesh.visible = true;
+            cappyPos.copy(activeEntity.position).add(new THREE.Vector3(0, 1.2, 0));
+            cappyMesh.position.copy(cappyPos);
+
+            // Determine throw direction based on character facing orientation
+            const forward = new THREE.Vector3(0, 0, 1).applyAxisAngle(new THREE.Vector3(0, 1, 0), playerRotationY);
+            cappyVelocity.copy(forward).multiplyScalar(CAPPY_SPEED);
+
+            // Hide Mario's cap while Cappy is thrown (if not captured)
+            if (!capturedObject) capMesh.visible = false;
+
+            audio.playCappy();
+        }
+
+        function updateCappy(dt) {
+            if (cappyState === 'idle') return;
+
+            const activeEntity = capturedObject ? capturedObject.group : playerGroup;
+
+            // Spin Cappy mesh visuals
+            cappyMesh.rotation.y += 25 * dt;
+
+            if (cappyState === 'throwing') {
+                cappyPos.addScaledVector(cappyVelocity, dt);
+                cappyMesh.position.copy(cappyPos);
+
+                const dist = cappyPos.distanceTo(activeEntity.position);
+                if (dist >= CAPPY_MAX_DIST) {
+                    cappyState = 'spinning';
+                    cappyTimer = 0.8; // Spin in place for 0.8s
+                }
+
+                // Check for Capture Collision
+                checkCappyCaptureCollision();
+            } 
+            else if (cappyState === 'spinning') {
+                cappyTimer -= dt;
+                if (cappyTimer <= 0) {
+                    cappyState = 'returning';
+                }
+                // Check if player jumps onto Cappy (CAPPY JUMP MECHANIC!)
+                checkCappyJump();
+            } 
+            else if (cappyState === 'returning') {
+                const targetPos = activeEntity.position.clone().add(new THREE.Vector3(0, 1.2, 0));
+                const dir = targetPos.sub(cappyPos);
+                
+                if (dir.length() < 1.0) {
+                    // Cappy returned home
+                    cappyState = 'idle';
+                    cappyMesh.visible = false;
+                    if (!capturedObject) capMesh.visible = true;
+                } else {
+                    dir.normalize().multiplyScalar(CAPPY_SPEED * 1.2);
+                    cappyPos.addScaledVector(dir, dt);
+                    cappyMesh.position.copy(cappyPos);
+                }
+            }
+        }
+
+        // Cappy High-Jump Booster Mechanic
+        function checkCappyJump() {
+            const activePos = capturedObject ? capturedObject.group.position : playerGroup.position;
+            const distHorizontal = new THREE.Vector2(activePos.x - cappyPos.x, activePos.z - cappyPos.z).length();
+            const distVertical = Math.abs(activePos.y - cappyPos.y);
+
+            // If player lands on top of spinning Cappy
+            if (distHorizontal < 1.2 && distVertical < 1.2 && playerVelocity.y < 0) {
+                playerVelocity.y = jumpForce * 1.35; // Mega Boost Jump!
+                cappyState = 'returning'; // Return immediately
+                audio.playJump();
+                createParticleBurst(cappyPos, 0xff0000, 12);
+            }
+        }
+
+        // Cappy Capture Collision Logic
+        function checkCappyCaptureCollision() {
+            if (capturedObject) return; // Cannot capture while already possessing
+
+            captureables.forEach(target => {
+                if (target.isCaptured) return;
+
+                const dist = cappyPos.distanceTo(target.group.position);
+                if (dist < 1.5) {
+                    // CAPTURE TRIGGERED!
+                    performCapture(target);
+                }
+            });
+        }
+
+        // CAPTURE MECHANIC TRANSFORMATION
+        function performCapture(target) {
+            capturedObject = target;
+            target.isCaptured = true;
+            capturedType = target.type;
+
+            // Hide Mario, position hat on captured target
+            playerGroup.visible = false;
+
+            // Add Cappy Hat to target head
+            if (!target.capInstance) {
+                target.capInstance = createCapMesh();
+                target.capInstance.position.set(0, 1.2, 0);
+                target.capInstance.scale.set(0.9, 0.9, 0.9);
+                target.group.add(target.capInstance);
+            }
+            target.capInstance.visible = true;
+
+            // Reset Cappy throw
+            cappyState = 'idle';
+            cappyMesh.visible = false;
+
+            // UI Badge Update
+            document.getElementById('capture-badge').classList.remove('hidden');
+            document.getElementById('captured-name').innerText = target.type.toUpperCase();
+            document.getElementById('btn-uncapture').classList.remove('hidden');
+
+            audio.playCapture();
+            createParticleBurst(target.group.position, 0xff0000, 20);
+        }
+
+        function uncapture() {
+            if (!capturedObject) return;
+
+            // Spawn Mario slightly above target
+            playerGroup.position.copy(capturedObject.group.position).add(new THREE.Vector3(0, 1.5, 0));
+            playerGroup.visible = true;
+            capMesh.visible = true;
+
+            // Hide Cap on Target & release
+            if (capturedObject.capInstance) capturedObject.capInstance.visible = false;
+            capturedObject.isCaptured = false;
+            capturedObject = null;
+
+            // UI Badge Update
+            document.getElementById('capture-badge').classList.add('hidden');
+            document.getElementById('btn-uncapture').classList.add('hidden');
+
+            playerVelocity.y = jumpForce * 0.8; // Small exit pop jump
+            audio.playJump();
+        }
+
+        // --- MAIN GAME PHYSICS & UPDATES ---
+        function updatePlayer(dt) {
+            if (isGamePaused) return;
+
+            const activeGroup = capturedObject ? capturedObject.group : playerGroup;
+            const currentJumpForce = capturedObject ? capturedObject.jumpHeight : jumpForce;
+
+            // 1. Calculate Camera Direction vectors for relative movement
+            const moveDir = new THREE.Vector3();
+            if (keys['KeyW'] || keys['ArrowUp']) moveDir.z -= 1;
+            if (keys['KeyS'] || keys['ArrowDown']) moveDir.z += 1;
+            if (keys['KeyA'] || keys['ArrowLeft']) moveDir.x -= 1;
+            if (keys['KeyD'] || keys['ArrowRight']) moveDir.x += 1;
+
+            moveDir.normalize();
+
+            // Transform input direction relative to Camera Angle
+            const camHeading = cameraAngleX;
+            const targetDir = new THREE.Vector3();
+            targetDir.x = moveDir.x * Math.cos(camHeading) + moveDir.z * Math.sin(camHeading);
+            targetDir.z = -moveDir.x * Math.sin(camHeading) + moveDir.z * Math.cos(camHeading);
+
+            // 2. Velocity X/Z Handling
+            if (targetDir.length() > 0.1) {
+                activeGroup.position.x += targetDir.x * playerSpeed * dt;
+                activeGroup.position.z += targetDir.z * playerSpeed * dt;
+
+                // Smooth Rotation towards movement
+                const targetRotation = Math.atan2(targetDir.x, targetDir.z);
+                playerRotationY = targetRotation;
+                activeGroup.rotation.y = playerRotationY;
+            }
+
+            // 3. Jump Physics
+            if (keys['Space'] && isGrounded) {
+                playerVelocity.y = currentJumpForce;
+                isGrounded = false;
+                audio.playJump();
+            }
+
+            // Gravity Application
+            playerVelocity.y -= gravity * dt;
+            activeGroup.position.y += playerVelocity.y * dt;
+
+            // 4. Ground Collision Physics against Platforms
+            isGrounded = false;
+            const activePos = activeGroup.position;
+
+            platforms.forEach(plat => {
+                const b = plat.bounds;
+                // Check horizontal overlap with margin
+                if (activePos.x >= b.minX - 0.5 && activePos.x <= b.maxX + 0.5 &&
+                    activePos.z >= b.minZ - 0.5 && activePos.z <= b.maxZ + 0.5) {
+                    
+                    // Standing on top of platform (adjusted collision threshold so player doesn't fall through when moving fast)
+                    if (activePos.y >= b.maxY - 0.4 && activePos.y <= b.maxY + 0.8 && playerVelocity.y <= 0) {
+                        activePos.y = b.maxY;
+                        playerVelocity.y = 0;
+                        isGrounded = true;
+                    }
+                }
+            });
+
+            // Keep Mario on master player group position aligned when uncaptured
+            if (!capturedObject) {
+                playerGroup.position.copy(activePos);
+            }
+
+            // Fall Death Boundary / Respawn
+            if (activePos.y < -15) {
+                activePos.set(0, 3, 0);
+                playerVelocity.set(0, 0, 0);
+            }
+
+            // 5. Check Collectible Pickups
+            checkCollectibles(activePos);
+        }
+
+        // Collect Coins & Moons
+        function checkCollectibles(playerPos) {
+            collectibles.forEach(item => {
+                if (item.collected) return;
+
+                const dist = playerPos.distanceTo(item.group.position);
+                if (dist < 1.5) {
+                    item.collected = true;
+                    item.group.visible = false;
+
+                    if (item.type === 'coin') {
+                        coinsCollected += 1;
+                        document.getElementById('coin-count').innerText = coinsCollected < 10 ? '0' + coinsCollected : coinsCollected;
+                        audio.playCoin();
+                        createParticleBurst(item.group.position, 0xffd700, 10);
+                    } 
+                    else if (item.type === 'moon') {
+                        moonsCollected += 1;
+                        document.getElementById('moon-count').innerText = moonsCollected;
+                        audio.playMoon();
+                        createParticleBurst(item.group.position, 0xffea00, 25);
+
+                        // Trigger Moon Collect UI Modal
+                        showMoonModal(item.title);
+
+                        if (moonsCollected >= totalMoonsToWin) {
+                            document.getElementById('ship-status').innerText = 'READY FOR LAUNCH!';
+                            document.getElementById('ship-status').className = 'text-sm font-extrabold text-green-400 animate-pulse';
+                        }
+                    }
+                }
+            });
+        }
+
+        function showMoonModal(title) {
+            isGamePaused = true;
+            document.getElementById('moon-title').innerText = `"${title}"`;
+            document.getElementById('moon-modal').classList.remove('hidden');
+
+            if (moonsCollected >= totalMoonsToWin) {
+                setTimeout(() => {
+                    document.getElementById('moon-modal').classList.add('hidden');
+                    document.getElementById('win-modal').classList.remove('hidden');
+                }, 2500);
+            }
+        }
+
+        // Particle Burst Effect Helper
+        function createParticleBurst(pos, colorHex, count) {
+            const pGroup = new THREE.Group();
+            const geo = new THREE.SphereGeometry(0.1, 4, 4);
+            const mat = new THREE.MeshBasicMaterial({ color: colorHex });
+
+            const particles = [];
+            for (let i = 0; i < count; i++) {
+                const p = new THREE.Mesh(geo, mat);
+                p.position.copy(pos);
+                const vel = new THREE.Vector3(
+                    (Math.random() - 0.5) * 8,
+                    Math.random() * 8 + 2,
+                    (Math.random() - 0.5) * 8
+                );
+                particles.push({ mesh: p, vel: vel });
+                pGroup.add(p);
+            }
+            scene.add(pGroup);
+
+            // Animate particles out and cleanup
+            let pTimer = 0;
+            const pInterval = setInterval(() => {
+                pTimer += 0.03;
+                particles.forEach(p => {
+                    p.mesh.position.addScaledVector(p.vel, 0.03);
+                    p.vel.y -= 9.8 * 0.03; // gravity
+                });
+                if (pTimer >= 0.6) {
+                    clearInterval(pInterval);
+                    scene.remove(pGroup);
+                }
+            }, 30);
+        }
+
+        // Dynamic Camera Orbiting Follow
+        function updateCamera() {
+            const target = capturedObject ? capturedObject.group.position : playerGroup.position;
+
+            // Orbit calculations
+            const x = target.x + cameraDistance * Math.sin(cameraAngleX) * Math.cos(cameraAngleY);
+            const y = target.y + cameraDistance * Math.sin(cameraAngleY);
+            const z = target.z + cameraDistance * Math.cos(cameraAngleX) * Math.cos(cameraAngleY);
+
+            camera.position.set(x, y, z);
+            camera.lookAt(target.x, target.y + 1.2, target.z);
+        }
+
+        // --- ANIMATION & GAME LOOP ---
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const dt = Math.min(clock.getDelta(), 0.1); // Cap delta time
+
+            // Spin Collectibles
+            collectibles.forEach(item => {
+                if (!item.collected) {
+                    item.group.rotation.y += 2 * dt;
+                }
+            });
+
+            // Update Game Logic
+            updatePlayer(dt);
+            updateCappy(dt);
+            updateCamera();
+
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // Start Game on Load
+        window.onload = init;
+    </script>
+</body>
+</html>
