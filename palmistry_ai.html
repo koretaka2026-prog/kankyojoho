@@ -1,0 +1,1168 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>手相鑑定 - Palmistry AI</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Noto+Serif+JP:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        mystic: {
+                            900: '#0B0719',
+                            800: '#140E2C',
+                            700: '#1F1742',
+                            600: '#2E225E',
+                            accent: '#D4AF37', // Gold
+                            accentGlow: '#FFD700',
+                            purple: '#9D4EDD',
+                            rose: '#F72585'
+                        }
+                    },
+                    fontFamily: {
+                        serif: ['"Noto Serif JP"', 'serif'],
+                        cinzel: ['"Cinzel"', 'serif'],
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* カスタムスタイルとアニメーション */
+        body {
+            background-color: #0B0719;
+            color: #E2E8F0;
+            font-family: 'Plus Jakarta Sans', 'Noto Serif JP', sans-serif;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            overflow-x: hidden;
+        }
+
+        /* 黄金グラデーションテキスト */
+        .gold-gradient-text {
+            background: linear-gradient(135deg, #FFF099 0%, #D4AF37 50%, #996515 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .gold-border {
+            border-image: linear-gradient(to bottom right, #D4AF37, #4A3B10) 1;
+        }
+
+        .glass-card {
+            background: rgba(20, 14, 44, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        .glass-button {
+            background: rgba(46, 34, 94, 0.6);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            transition: all 0.2s ease-out;
+        }
+
+        .glass-button:active {
+            transform: scale(0.97);
+            background: rgba(157, 78, 221, 0.4);
+        }
+
+        /* スキャンエフェクト */
+        .scan-line {
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, transparent, #FFD700, #9D4EDD, transparent);
+            box-shadow: 0 0 15px #FFD700;
+            position: absolute;
+            animation: scan 2.5s ease-in-out infinite alternate;
+        }
+
+        @keyframes scan {
+            0% { top: 5%; opacity: 0.3; }
+            50% { opacity: 1; }
+            100% { top: 90%; opacity: 0.3; }
+        }
+
+        /* パルス光彩アニメーション */
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 15px rgba(212, 175, 55, 0.3); }
+            50% { box-shadow: 0 0 30px rgba(212, 175, 55, 0.8), 0 0 45px rgba(157, 78, 221, 0.5); }
+        }
+
+        .glow-pulse {
+            animation: pulseGlow 3s infinite;
+        }
+
+        /* スクロールバーのカスタマイズ */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0B0719;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2E225E;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between select-none pb-16">
+
+    <!-- Header / Navbar -->
+    <header class="sticky top-0 z-40 glass-card px-4 py-3 flex justify-between items-center border-b border-mystic-accent/20">
+        <div class="flex items-center space-x-2 cursor-pointer" onclick="switchTab('home')">
+            <i class="fa-solid fa-hand-sparkles text-mystic-accent text-xl"></i>
+            <span class="font-cinzel font-bold text-lg tracking-wider gold-gradient-text">PALMISTRY AI</span>
+        </div>
+        <div class="flex items-center space-x-3">
+            <button id="soundToggle" onclick="toggleSound()" class="w-9 h-9 rounded-full glass-button flex items-center justify-center text-mystic-accent text-sm">
+                <i class="fa-solid fa-volume-high"></i>
+            </button>
+            <button onclick="switchTab('history')" class="w-9 h-9 rounded-full glass-button flex items-center justify-center text-gray-300 text-sm">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 max-w-md mx-auto w-full px-4 py-4">
+
+        <!-- VIEW 1: HOME (モード選択・デイリー占い) -->
+        <section id="view-home" class="space-y-6">
+            <!-- Hero Banner -->
+            <div class="glass-card rounded-2xl p-6 text-center relative overflow-hidden glow-pulse">
+                <div class="absolute -right-10 -bottom-10 w-32 h-32 bg-mystic-purple/20 rounded-full blur-2xl pointer-events-none"></div>
+                <div class="inline-block p-3 rounded-full bg-mystic-700/60 border border-mystic-accent/30 mb-3">
+                    <i class="fa-solid fa-wand-magic-sparkles text-mystic-accent text-2xl"></i>
+                </div>
+                <h1 class="font-serif font-bold text-2xl mb-1 text-white">手相で紐解く、あなたの運命</h1>
+                <p class="text-xs text-gray-300 leading-relaxed mb-5">手のひらに刻まれた線のパターンや丘の張りから、性格・恋愛・仕事・金運・才能を解読します。</p>
+                
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="startWizard()" class="glass-button p-4 rounded-xl flex flex-col items-center justify-center border-mystic-accent/50 hover:bg-mystic-600/40">
+                        <i class="fa-solid fa-[#fa-list-check] fa-list-check text-2xl text-mystic-accent mb-2"></i>
+                        <span class="text-xs font-bold text-white">診断ウィザード</span>
+                        <span class="text-[10px] text-gray-400 mt-0.5">質問形式で詳しく指定</span>
+                    </button>
+                    <button onclick="startScanMode()" class="glass-button p-4 rounded-xl flex flex-col items-center justify-center border-mystic-purple/50 hover:bg-mystic-600/40">
+                        <i class="fa-solid fa-camera text-2xl text-mystic-purple mb-2"></i>
+                        <span class="text-xs font-bold text-white">カメラ/画像スキャン</span>
+                        <span class="text-[10px] text-gray-400 mt-0.5">AI手相検出シミュレータ</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Daily Palm Tip Card -->
+            <div class="glass-card rounded-2xl p-4 border border-mystic-accent/20">
+                <div class="flex items-center justify-between border-b border-gray-700/50 pb-2 mb-3">
+                    <div class="flex items-center space-x-2">
+                        <i class="fa-solid fa-sun text-yellow-400 text-sm"></i>
+                        <h2 class="font-serif text-sm font-bold text-white">本日の手相ワンポイント</h2>
+                    </div>
+                    <span id="daily-date" class="text-[10px] text-mystic-accent bg-mystic-700/80 px-2 py-0.5 rounded-full"></span>
+                </div>
+                <div class="flex items-start space-x-3">
+                    <div class="w-12 h-12 rounded-lg bg-mystic-800 border border-mystic-accent/30 flex items-center justify-center shrink-0">
+                        <i id="daily-icon" class="fa-solid fa-heart text-mystic-rose text-lg"></i>
+                    </div>
+                    <div>
+                        <h3 id="daily-title" class="text-xs font-bold text-mystic-accent mb-1"></h3>
+                        <p id="daily-desc" class="text-xs text-gray-300 leading-relaxed"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Interactive Palm Map Shortcut -->
+            <div onclick="switchTab('map')" class="glass-card rounded-2xl p-4 flex items-center justify-between cursor-pointer hover:border-mystic-accent/50 transition">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-full bg-mystic-purple/20 flex items-center justify-center text-mystic-purple">
+                        <i class="fa-solid fa-hand"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-bold text-white">インタラクティブ手相マップ</h3>
+                        <p class="text-[11px] text-gray-400">生命線・感情線や丘の意味を直接タップして学ぶ</p>
+                    </div>
+                </div>
+                <i class="fa-solid fa-chevron-right text-gray-500 text-xs"></i>
+            </div>
+        </section>
+
+        <!-- VIEW 2: WIZARD MODE (ステップ形式手相選択) -->
+        <section id="view-wizard" class="hidden space-y-5">
+            <!-- Progress Header -->
+            <div class="flex items-center justify-between">
+                <button onclick="wizardBack()" class="text-xs text-gray-400 hover:text-white flex items-center space-x-1">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    <span>戻る</span>
+                </button>
+                <span id="wizard-step-indicator" class="text-xs font-mono text-mystic-accent">STEP 1 / 5</span>
+            </div>
+
+            <!-- Step Title & Progress Bar -->
+            <div>
+                <div class="w-full bg-mystic-800 rounded-full h-1.5 mb-3 overflow-hidden">
+                    <div id="wizard-progress" class="bg-gradient-to-r from-mystic-purple to-mystic-accent h-full w-1/5 transition-all duration-300"></div>
+                </div>
+                <h2 id="wizard-step-title" class="font-serif text-lg font-bold text-white text-center"></h2>
+                <p id="wizard-step-subtitle" class="text-xs text-gray-400 text-center mt-0.5"></p>
+            </div>
+
+            <!-- Hand Selection Graphic (Step 1) -->
+            <div id="hand-selector-box" class="glass-card p-4 rounded-2xl text-center space-y-4">
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="selectHand('left')" id="btn-hand-left" class="hand-btn glass-button p-4 rounded-xl flex flex-col items-center border-mystic-accent">
+                        <i class="fa-solid fa-hand-back-fist transform -scale-x-100 text-3xl text-mystic-accent mb-2"></i>
+                        <span class="text-xs font-bold text-white">左手（生まれ持つ運）</span>
+                        <span class="text-[10px] text-gray-400 mt-1">潜在能力・生まれつきの性格</span>
+                    </button>
+                    <button onclick="selectHand('right')" id="btn-hand-right" class="hand-btn glass-button p-4 rounded-xl flex flex-col items-center">
+                        <i class="fa-solid fa-hand-back-fist text-3xl text-gray-400 mb-2"></i>
+                        <span class="text-xs font-bold text-white">右手（後天的な運）</span>
+                        <span class="text-[10px] text-gray-400 mt-1">現在の状態・未来の変化</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Line Characteristics Selection Options (Steps 2~5) -->
+            <div id="wizard-options" class="grid grid-cols-1 gap-3">
+                <!-- Dynamically populated via JS -->
+            </div>
+
+            <!-- Wizard Controls -->
+            <div class="pt-2 flex justify-between">
+                <button id="btn-wizard-prev" onclick="wizardStepPrev()" class="glass-button px-5 py-2.5 rounded-xl text-xs text-gray-300 font-bold hidden">
+                    前へ
+                </button>
+                <button id="btn-wizard-next" onclick="wizardStepNext()" class="glass-button px-6 py-2.5 rounded-xl text-xs bg-mystic-accent text-mystic-900 font-bold ml-auto shadow-lg hover:bg-yellow-400">
+                    次へ進む <i class="fa-solid fa-arrow-right ml-1"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- VIEW 3: CAMERA / IMAGE SCANNER SIMULATOR -->
+        <section id="view-scan" class="hidden space-y-5">
+            <div class="flex items-center justify-between">
+                <button onclick="switchTab('home')" class="text-xs text-gray-400 flex items-center space-x-1">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    <span>ホーム</span>
+                </button>
+                <span class="text-xs text-mystic-accent font-bold">AI 手相スキャナー</span>
+            </div>
+
+            <!-- Viewport Area -->
+            <div class="relative w-full aspect-[3/4] bg-mystic-900 rounded-2xl overflow-hidden border border-mystic-accent/30 shadow-2xl flex flex-col items-center justify-center">
+                
+                <!-- Video / Preview Image -->
+                <video id="webcam-video" autoplay playsinline class="absolute inset-0 w-full h-full object-cover hidden"></video>
+                <img id="image-preview" class="absolute inset-0 w-full h-full object-cover hidden" alt="Palm Preview">
+                
+                <!-- Placeholder Placeholder UI -->
+                <div id="scan-placeholder" class="text-center p-6 space-y-3 z-10">
+                    <div class="w-16 h-16 rounded-full bg-mystic-800/80 border border-mystic-accent/40 flex items-center justify-center mx-auto text-mystic-accent text-2xl mb-2">
+                        <i class="fa-solid fa-hand-holding-hand"></i>
+                    </div>
+                    <p class="text-xs text-gray-300">明るい場所で、手のひらをまっすぐカメラにかざすか画像をアップロードしてください。</p>
+                </div>
+
+                <!-- Scanner Overlay Lines & Grid -->
+                <div id="scanner-overlay" class="absolute inset-0 border-2 border-mystic-accent/40 rounded-2xl pointer-events-none hidden">
+                    <div class="scan-line"></div>
+                    <!-- Target Hand Outline SVG Guide -->
+                    <svg class="w-full h-full opacity-40 p-8" viewBox="0 0 100 130" fill="none" stroke="#FFD700" stroke-width="1" stroke-dasharray="2 2">
+                        <path d="M 30,120 Q 20,90 20,60 Q 20,35 27,30 Q 33,28 35,45 Q 35,20 44,18 Q 50,18 50,42 Q 53,15 62,15 Q 68,15 67,45 Q 72,25 79,28 Q 84,32 80,60 Q 75,90 70,120 Z"/>
+                    </svg>
+                </div>
+
+                <!-- Scanning Status Indicator -->
+                <div id="scan-status" class="absolute bottom-4 left-4 right-4 text-center glass-card py-2 px-3 rounded-xl text-xs text-mystic-accent font-mono hidden z-20">
+                    <i class="fa-solid fa-spinner fa-spin mr-2"></i><span id="scan-status-text">手のひらを認識中...</span>
+                </div>
+            </div>
+
+            <!-- Upload Controls & Action Buttons -->
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="startCamera()" class="glass-button p-3 rounded-xl text-xs font-bold text-white flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-video text-mystic-accent"></i>
+                    <span>カメラを起動</span>
+                </button>
+                <label class="glass-button p-3 rounded-xl text-xs font-bold text-white flex items-center justify-center space-x-2 cursor-pointer">
+                    <i class="fa-solid fa-image text-mystic-purple"></i>
+                    <span>写真を選択</span>
+                    <input type="file" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
+                </label>
+            </div>
+
+            <button id="btn-execute-scan" onclick="runAIScanProcess()" disabled class="w-full glass-button py-3.5 rounded-xl text-sm font-bold bg-mystic-accent/20 text-gray-500 border-gray-700 cursor-not-allowed transition">
+                <i class="fa-solid fa-sparkles mr-2"></i>手相解析を実行
+            </button>
+        </section>
+
+        <!-- VIEW 4: DETAILED REPORT / FORTUNE RESULT -->
+        <section id="view-result" class="hidden space-y-6">
+            <!-- Header Banner -->
+            <div class="glass-card rounded-2xl p-5 text-center relative overflow-hidden border-mystic-accent/40">
+                <span class="text-[10px] tracking-widest text-mystic-accent uppercase font-cinzel">Palmistry Analysis Report</span>
+                <h2 class="font-serif text-2xl font-bold text-white mt-1 mb-2">手相鑑定総合結果</h2>
+                <div id="result-hand-type" class="inline-block bg-mystic-700/80 text-mystic-accent border border-mystic-accent/30 text-xs px-3 py-1 rounded-full mb-3">
+                    左手鑑定（生まれ持った資質）
+                </div>
+
+                <!-- Radar Chart Container -->
+                <div class="w-full flex justify-center py-2">
+                    <canvas id="radarChart" width="240" height="240" class="max-w-full"></canvas>
+                </div>
+            </div>
+
+            <!-- Overall Energy Rating -->
+            <div class="glass-card p-4 rounded-xl flex items-center justify-between border-l-4 border-l-mystic-accent">
+                <div>
+                    <h3 class="text-xs text-gray-400">総合運勢エナジー指数</h3>
+                    <div id="result-score-text" class="text-xl font-bold text-white font-cinzel">92 / 100</div>
+                </div>
+                <div id="result-type-badge" class="bg-mystic-purple/30 text-mystic-purple px-3 py-1.5 rounded-lg text-xs font-bold border border-mystic-purple/40">
+                    強運の大器タイプ
+                </div>
+            </div>
+
+            <!-- Category Results Breakdown -->
+            <div id="result-categories" class="space-y-4">
+                <!-- Dynamically filled: Love, Work, Health, Personality -->
+            </div>
+
+            <!-- Lucky Elements Advice -->
+            <div class="glass-card p-4 rounded-xl space-y-3">
+                <h3 class="font-serif text-xs font-bold text-mystic-accent flex items-center">
+                    <i class="fa-solid fa-clover mr-2"></i>開運アクション & ラッキーアイテム
+                </h3>
+                <div class="grid grid-cols-2 gap-3 text-xs">
+                    <div class="bg-mystic-800/60 p-2.5 rounded-lg border border-gray-700/50">
+                        <span class="text-gray-400 text-[10px] block">ラッキーカラー</span>
+                        <span id="lucky-color" class="font-bold text-white">ロイヤルブルー</span>
+                    </div>
+                    <div class="bg-mystic-800/60 p-2.5 rounded-lg border border-gray-700/50">
+                        <span class="text-gray-400 text-[10px] block">開運アイテム</span>
+                        <span id="lucky-item" class="font-bold text-white">天然石のアクセサリー</span>
+                    </div>
+                </div>
+                <p id="lucky-advice" class="text-xs text-gray-300 leading-relaxed pt-1 border-t border-gray-800"></p>
+            </div>
+
+            <!-- Action Buttons: Share & Save -->
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="shareOrSaveResult()" class="glass-button p-3 rounded-xl text-xs font-bold text-mystic-accent border-mystic-accent/40 flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-download"></i>
+                    <span>鑑定書を画像保存</span>
+                </button>
+                <button onclick="switchTab('home')" class="glass-button p-3 rounded-xl text-xs font-bold text-white flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-rotate-right"></i>
+                    <span>もう一度占う</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- VIEW 5: INTERACTIVE HAND MAP (手のひらマップ) -->
+        <section id="view-map" class="hidden space-y-4">
+            <div class="flex items-center justify-between">
+                <button onclick="switchTab('home')" class="text-xs text-gray-400 flex items-center space-x-1">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    <span>戻る</span>
+                </button>
+                <h2 class="font-serif text-xs font-bold text-mystic-accent">タップして学ぶ 手相＆丘マップ</h2>
+            </div>
+
+            <!-- Interactive Hand SVG Layer -->
+            <div class="glass-card p-4 rounded-2xl text-center space-y-3">
+                <p class="text-xs text-gray-300">各線や「丘（Mount）」をタップすると解説が表示されます。</p>
+                <div class="relative w-full aspect-[4/5] bg-mystic-900 rounded-xl overflow-hidden flex items-center justify-center border border-mystic-accent/20">
+                    
+                    <svg viewBox="0 0 300 400" class="w-full h-full drop-shadow-md">
+                        <!-- Hand Base Shape -->
+                        <path d="M 80,380 C 70,300 40,240 30,170 C 25,140 45,130 55,160 C 50,110 70,80 82,120 C 80,60 105,40 120,70 C 122,30 148,30 155,75 C 160,20 185,25 188,85 C 195,50 220,60 215,115 C 220,100 245,115 235,165 C 220,230 255,250 240,320 C 230,370 190,385 150,385 Z" 
+                              fill="#140E2C" stroke="#2E225E" stroke-width="3"/>
+                        
+                        <!-- Mount Areas (Clickable Circles) -->
+                        <!-- 木星丘 (Jupiter) -->
+                        <g onclick="showMapDetail('jupiter')" class="cursor-pointer group">
+                            <circle cx="110" cy="120" r="18" fill="rgba(157, 78, 221, 0.2)" stroke="#9D4EDD" stroke-width="1.5" class="group-hover:fill-mystic-purple/50 transition"/>
+                            <text x="110" y="124" font-size="10" fill="#E2E8F0" text-anchor="middle" font-weight="bold">木星丘</text>
+                        </g>
+                        <!-- 土星丘 (Saturn) -->
+                        <g onclick="showMapDetail('saturn')" class="cursor-pointer group">
+                            <circle cx="145" cy="110" r="16" fill="rgba(157, 78, 221, 0.2)" stroke="#9D4EDD" stroke-width="1.5" class="group-hover:fill-mystic-purple/50 transition"/>
+                            <text x="145" y="114" font-size="10" fill="#E2E8F0" text-anchor="middle" font-weight="bold">土星丘</text>
+                        </g>
+                        <!-- 太陽丘 (Sun) -->
+                        <g onclick="showMapDetail('sun')" class="cursor-pointer group">
+                            <circle cx="180" cy="118" r="16" fill="rgba(157, 78, 221, 0.2)" stroke="#9D4EDD" stroke-width="1.5" class="group-hover:fill-mystic-purple/50 transition"/>
+                            <text x="180" y="122" font-size="10" fill="#E2E8F0" text-anchor="middle" font-weight="bold">太陽丘</text>
+                        </g>
+                        <!-- 金星丘 (Venus) -->
+                        <g onclick="showMapDetail('venus')" class="cursor-pointer group">
+                            <circle cx="95" cy="270" r="28" fill="rgba(212, 175, 55, 0.15)" stroke="#D4AF37" stroke-width="1.5" class="group-hover:fill-mystic-accent/40 transition"/>
+                            <text x="95" y="274" font-size="11" fill="#FFD700" text-anchor="middle" font-weight="bold">金星丘</text>
+                        </g>
+                        <!-- 月丘 (Moon) -->
+                        <g onclick="showMapDetail('moon')" class="cursor-pointer group">
+                            <circle cx="210" cy="290" r="26" fill="rgba(212, 175, 55, 0.15)" stroke="#D4AF37" stroke-width="1.5" class="group-hover:fill-mystic-accent/40 transition"/>
+                            <text x="210" y="294" font-size="11" fill="#FFD700" text-anchor="middle" font-weight="bold">月丘</text>
+                        </g>
+
+                        <!-- Major Lines -->
+                        <!-- 生命線 (Life Line) -->
+                        <path onclick="showMapDetail('life')" d="M 105,175 Q 85,220 100,280 Q 115,330 145,355" fill="none" stroke="#FF4D6D" stroke-width="4" stroke-linecap="round" class="cursor-pointer hover:stroke-rose-400 transition"/>
+                        <!-- 頭脳線 (Head Line) -->
+                        <path onclick="showMapDetail('head')" d="M 100,185 Q 150,210 200,240" fill="none" stroke="#00F5D4" stroke-width="4" stroke-linecap="round" class="cursor-pointer hover:stroke-teal-300 transition"/>
+                        <!-- 感情線 (Heart Line) -->
+                        <path onclick="showMapDetail('heart')" d="M 225,170 Q 170,140 120,160" fill="none" stroke="#7B2CBF" stroke-width="4" stroke-linecap="round" class="cursor-pointer hover:stroke-purple-300 transition"/>
+                        <!-- 運命線 (Fate Line) -->
+                        <path onclick="showMapDetail('fate')" d="M 160,340 L 155,160" fill="none" stroke="#FFD700" stroke-width="3" stroke-dasharray="4 2" stroke-linecap="round" class="cursor-pointer hover:stroke-yellow-200 transition"/>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Detail Display Card -->
+            <div id="map-detail-card" class="glass-card p-4 rounded-xl space-y-2 border-mystic-accent/30">
+                <div class="flex items-center space-x-2">
+                    <span id="map-detail-badge" class="bg-mystic-accent/20 text-mystic-accent text-[10px] px-2 py-0.5 rounded font-bold">選択してください</span>
+                    <h3 id="map-detail-title" class="text-sm font-bold text-white">手の部位をタップ</h3>
+                </div>
+                <p id="map-detail-desc" class="text-xs text-gray-300 leading-relaxed">上の手相図の線や円状の「丘」をタップすると、意味や司る運勢が詳しく表示されます。</p>
+            </div>
+        </section>
+
+        <!-- VIEW 6: HISTORY (過去の鑑定履歴) -->
+        <section id="view-history" class="hidden space-y-4">
+            <div class="flex items-center justify-between">
+                <button onclick="switchTab('home')" class="text-xs text-gray-400 flex items-center space-x-1">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    <span>戻る</span>
+                </button>
+                <h2 class="font-serif text-xs font-bold text-white">鑑定履歴</h2>
+                <button onclick="clearHistory()" class="text-[10px] text-red-400">削除</button>
+            </div>
+
+            <div id="history-list" class="space-y-3">
+                <!-- Dynamically populated -->
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Bottom Navigation Bar (Mobile Friendly) -->
+    <nav class="fixed bottom-0 left-0 right-0 glass-card border-t border-mystic-accent/20 z-40 max-w-md mx-auto">
+        <div class="grid grid-cols-4 py-2">
+            <button onclick="switchTab('home')" id="nav-home" class="flex flex-col items-center justify-center text-mystic-accent">
+                <i class="fa-solid fa-house text-base"></i>
+                <span class="text-[10px] mt-1">ホーム</span>
+            </button>
+            <button onclick="startWizard()" id="nav-wizard" class="flex flex-col items-center justify-center text-gray-400">
+                <i class="fa-solid fa-wand-magic-sparkles text-base"></i>
+                <span class="text-[10px] mt-1">手相診断</span>
+            </button>
+            <button onclick="switchTab('map')" id="nav-map" class="flex flex-col items-center justify-center text-gray-400">
+                <i class="fa-solid fa-hand text-base"></i>
+                <span class="text-[10px] mt-1">手相マップ</span>
+            </button>
+            <button onclick="switchTab('history')" id="nav-history" class="flex flex-col items-center justify-center text-gray-400">
+                <i class="fa-solid fa-clock-rotate-left text-base"></i>
+                <span class="text-[10px] mt-1">履歴</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Canvas for Image Generation (Hidden) -->
+    <canvas id="shareCanvas" class="hidden"></canvas>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        /* ---------------------------------------------------
+         * 1. STATE & CONSTANTS
+         * --------------------------------------------------- */
+        let currentTab = 'home';
+        let soundEnabled = true;
+
+        // Web Audio Synth for Subtle SFX
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playSound(freq = 440, duration = 0.1, type = 'sine') {
+            if (!soundEnabled) return;
+            try {
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            } catch (e) {
+                console.log("Audio play blocked", e);
+            }
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            const btn = document.getElementById('soundToggle');
+            btn.innerHTML = soundEnabled ? '<i class="fa-solid fa-volume-high"></i>' : '<i class="fa-solid fa-volume-xmark text-gray-500"></i>';
+            if (soundEnabled) playSound(880, 0.15);
+        }
+
+        // Wizard State & Definition
+        let wizardData = {
+            hand: 'left',
+            lifeLine: 0,
+            headLine: 0,
+            heartLine: 0,
+            fateLine: 0
+        };
+
+        let currentWizardStep = 1;
+
+        const wizardSteps = [
+            { title: "占う手を選択", subtitle: "手相を見る目的を選びましょう" },
+            {
+                title: "生命線（健康・体力・生活力）",
+                subtitle: "親指の付け根を囲む曲線の特徴を選んでください",
+                key: "lifeLine",
+                options: [
+                    { title: "長くてくっきりカーブしている", desc: "生命力・スタミナ旺盛。病気に強く長寿傾向", score: { health: 95, vitality: 90 } },
+                    { title: "短め、または直線的", desc: "無理は禁物。マイペースな生活を好むタイプ", score: { health: 70, vitality: 65 } },
+                    { title: "途切れや枝分かれ（二重生命線）がある", desc: "変化の多い人生。バイタリティが高く運気転換に強い", score: { health: 85, vitality: 92 } }
+                ]
+            },
+            {
+                title: "頭脳線（思考・才能・適職）",
+                subtitle: "手のひらの真ん中を横切る線の特徴を選んでください",
+                key: "headLine",
+                options: [
+                    { title: "まっすぐ水平に伸びている", desc: "現実的で理系・ビジネス思考。論理的判断が得意", score: { work: 92, intelligence: 90 } },
+                    { title: "緩やかに下降して月丘に届く", desc: "創造的で芸術肌。直感力とアイディアに恵まれる", score: { work: 85, intelligence: 95 } },
+                    { title: "先端が二つ以上に枝分かれしている", desc: "多才でアイデア豊富。二足のわらじや副業で成功", score: { work: 95, intelligence: 88 } }
+                ]
+            },
+            {
+                title: "感情線（恋愛・対人・情緒）",
+                subtitle: "小指の下から人差し指側へ伸びる線の特徴を選んでください",
+                key: "heartLine",
+                options: [
+                    { title: "人差し指と中指の間に深く入る", desc: "誠実で愛情深い。一途で思いやりあふれる関係を育む", score: { love: 95, emotion: 90 } },
+                    { title: "まっすぐ短めに伸びている", desc: "クールで感情に流されない。さっぱりした人間関係を好む", score: { love: 72, emotion: 75 } },
+                    { title: "チェーン状や複雑な分岐がある", desc: "感性豊かで惚れっぽい。ロマンチストでモテるタイプ", score: { love: 88, emotion: 92 } }
+                ]
+            },
+            {
+                title: "運命線（目標・仕事運・人生の転機）",
+                subtitle: "手首から中指に向かって縦に伸びる線の特徴を選んでください",
+                key: "fateLine",
+                options: [
+                    { title: "手首から中指まで直線的に太く伸びる", desc: "初志貫徹のリーダータイプ。自身の力で開運する", score: { fate: 95, fortune: 90 } },
+                    { title: "月丘（小指側の手首上）から伸びている", desc: "周囲の援助やファンに恵まれて成功する人気運タイプ", score: { fate: 90, fortune: 94 } },
+                    { title: "薄い、または線があまり目立たない", desc: "自由な生き方を好む。環境に柔軟に適応するタイプ", score: { fate: 75, fortune: 80 } }
+                ]
+            }
+        ];
+
+        /* ---------------------------------------------------
+         * 2. TAB NAVIGATION & VIEW SWITCHING
+         * --------------------------------------------------- */
+        function switchTab(tabName) {
+            playSound(600, 0.08);
+            currentTab = tabName;
+
+            // Hide all views
+            ['home', 'wizard', 'scan', 'result', 'map', 'history'].forEach(view => {
+                const el = document.getElementById(`view-${view}`);
+                if (el) el.classList.add('hidden');
+            });
+
+            // Show selected view
+            const targetView = document.getElementById(`view-${tabName}`);
+            if (targetView) targetView.classList.remove('hidden');
+
+            // Reset bottom nav highlights
+            ['home', 'wizard', 'map', 'history'].forEach(nav => {
+                const navBtn = document.getElementById(`nav-${nav}`);
+                if (navBtn) {
+                    if (nav === tabName || (tabName === 'result' && nav === 'wizard')) {
+                        navBtn.className = "flex flex-col items-center justify-center text-mystic-accent";
+                    } else {
+                        navBtn.className = "flex flex-col items-center justify-center text-gray-400";
+                    }
+                }
+            });
+
+            if (tabName === 'history') loadHistoryView();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        /* ---------------------------------------------------
+         * 3. WIZARD LOGIC
+         * --------------------------------------------------- */
+        function startWizard() {
+            currentWizardStep = 1;
+            wizardData = { hand: 'left', lifeLine: 0, headLine: 0, heartLine: 0, fateLine: 0 };
+            renderWizardStep();
+            switchTab('wizard');
+        }
+
+        function selectHand(hand) {
+            playSound(700, 0.08);
+            wizardData.hand = hand;
+            const btnL = document.getElementById('btn-hand-left');
+            const btnR = document.getElementById('btn-hand-right');
+            if (hand === 'left') {
+                btnL.className = "hand-btn glass-button p-4 rounded-xl flex flex-col items-center border-mystic-accent bg-mystic-700/50";
+                btnR.className = "hand-btn glass-button p-4 rounded-xl flex flex-col items-center border-gray-700 opacity-60";
+            } else {
+                btnR.className = "hand-btn glass-button p-4 rounded-xl flex flex-col items-center border-mystic-accent bg-mystic-700/50";
+                btnL.className = "hand-btn glass-button p-4 rounded-xl flex flex-col items-center border-gray-700 opacity-60";
+            }
+        }
+
+        function renderWizardStep() {
+            const stepInfo = wizardSteps[currentWizardStep - 1];
+            document.getElementById('wizard-step-indicator').innerText = `STEP ${currentWizardStep} / 5`;
+            document.getElementById('wizard-progress').style.width = `${(currentWizardStep / 5) * 100}%`;
+            document.getElementById('wizard-step-title').innerText = stepInfo.title;
+            document.getElementById('wizard-step-subtitle').innerText = stepInfo.subtitle;
+
+            const handBox = document.getElementById('hand-selector-box');
+            const optionsBox = document.getElementById('wizard-options');
+            const prevBtn = document.getElementById('btn-wizard-prev');
+
+            if (currentWizardStep === 1) {
+                handBox.classList.remove('hidden');
+                optionsBox.classList.add('hidden');
+                prevBtn.classList.add('hidden');
+            } else {
+                handBox.classList.add('hidden');
+                optionsBox.classList.remove('hidden');
+                prevBtn.classList.remove('hidden');
+
+                // Generate Options
+                optionsBox.innerHTML = '';
+                const currentKey = stepInfo.key;
+                const selectedIdx = wizardData[currentKey] || 0;
+
+                stepInfo.options.forEach((opt, idx) => {
+                    const isSelected = selectedIdx === idx;
+                    const card = document.createElement('div');
+                    card.className = `glass-button p-4 rounded-xl cursor-pointer border transition ${
+                        isSelected ? 'border-mystic-accent bg-mystic-700/60 shadow-lg' : 'border-gray-800 hover:border-gray-600'
+                    }`;
+                    card.onclick = () => {
+                        playSound(500 + idx * 100, 0.08);
+                        wizardData[currentKey] = idx;
+                        renderWizardStep();
+                    };
+
+                    card.innerHTML = `
+                        <div class="flex items-start justify-between">
+                            <div class="pr-2">
+                                <h4 class="text-xs font-bold text-white mb-1 flex items-center">
+                                    <i class="fa-solid ${isSelected ? 'fa-circle-check text-mystic-accent' : 'fa-circle text-gray-600'} mr-2"></i>
+                                    ${opt.title}
+                                </h4>
+                                <p class="text-[11px] text-gray-300 leading-relaxed">${opt.desc}</p>
+                            </div>
+                        </div>
+                    `;
+                    optionsBox.appendChild(card);
+                });
+            }
+        }
+
+        function wizardStepNext() {
+            playSound(750, 0.1);
+            if (currentWizardStep < 5) {
+                currentWizardStep++;
+                renderWizardStep();
+            } else {
+                generateReportFromWizard();
+            }
+        }
+
+        function wizardStepPrev() {
+            playSound(400, 0.08);
+            if (currentWizardStep > 1) {
+                currentWizardStep--;
+                renderWizardStep();
+            }
+        }
+
+        function wizardBack() {
+            if (currentWizardStep > 1) {
+                wizardStepPrev();
+            } else {
+                switchTab('home');
+            }
+        }
+
+        /* ---------------------------------------------------
+         * 4. CAMERA & AI SCANNER SIMULATION
+         * --------------------------------------------------- */
+        let streamTrack = null;
+
+        function startScanMode() {
+            switchTab('scan');
+            resetScannerUI();
+        }
+
+        function resetScannerUI() {
+            document.getElementById('webcam-video').classList.add('hidden');
+            document.getElementById('image-preview').classList.add('hidden');
+            document.getElementById('scan-placeholder').classList.remove('hidden');
+            document.getElementById('scanner-overlay').classList.add('hidden');
+            document.getElementById('scan-status').classList.add('hidden');
+            
+            const execBtn = document.getElementById('btn-execute-scan');
+            execBtn.disabled = true;
+            execBtn.className = "w-full glass-button py-3.5 rounded-xl text-sm font-bold bg-mystic-accent/20 text-gray-500 border-gray-700 cursor-not-allowed transition";
+        }
+
+        async function startCamera() {
+            playSound(600, 0.1);
+            resetScannerUI();
+            const video = document.getElementById('webcam-video');
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                streamTrack = stream.getVideoTracks()[0];
+                video.srcObject = stream;
+                video.classList.remove('hidden');
+                document.getElementById('scan-placeholder').classList.add('hidden');
+                document.getElementById('scanner-overlay').classList.remove('hidden');
+
+                enableExecuteButton();
+            } catch (err) {
+                alert("カメラの起動に失敗しました。ファイル選択をお試しください。");
+            }
+        }
+
+        function handleImageUpload(event) {
+            playSound(600, 0.1);
+            const file = event.target.files[0];
+            if (!file) return;
+
+            resetScannerUI();
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = document.getElementById('image-preview');
+                img.src = e.target.result;
+                img.classList.remove('hidden');
+                document.getElementById('scan-placeholder').classList.add('hidden');
+                document.getElementById('scanner-overlay').classList.remove('hidden');
+
+                enableExecuteButton();
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function enableExecuteButton() {
+            const execBtn = document.getElementById('btn-execute-scan');
+            execBtn.disabled = false;
+            execBtn.className = "w-full glass-button py-3.5 rounded-xl text-sm font-bold bg-mystic-accent text-mystic-900 border-mystic-accent shadow-lg hover:bg-yellow-400 transition cursor-pointer";
+        }
+
+        function runAIScanProcess() {
+            playSound(900, 0.2, 'square');
+            const statusBox = document.getElementById('scan-status');
+            const statusText = document.getElementById('scan-status-text');
+            statusBox.classList.remove('hidden');
+
+            const steps = [
+                "手のひらの輪郭を抽出中...",
+                "三大原線（生命線・頭脳線・感情線）を解析中...",
+                "丘の張り・運命線の深度を分析中...",
+                "鑑定レポート生成完了！"
+            ];
+
+            let stepIdx = 0;
+            const interval = setInterval(() => {
+                if (stepIdx < steps.length) {
+                    statusText.innerText = steps[stepIdx];
+                    playSound(600 + stepIdx * 150, 0.1);
+                    stepIdx++;
+                } else {
+                    clearInterval(interval);
+                    // Stop stream if active
+                    if (streamTrack) streamTrack.stop();
+                    
+                    // Generate random pseudo-wizard selection based on scan simulation
+                    wizardData = {
+                        hand: Math.random() > 0.5 ? 'left' : 'right',
+                        lifeLine: Math.floor(Math.random() * 3),
+                        headLine: Math.floor(Math.random() * 3),
+                        heartLine: Math.floor(Math.random() * 3),
+                        fateLine: Math.floor(Math.random() * 3)
+                    };
+                    generateReportFromWizard();
+                }
+            }, 800);
+        }
+
+        /* ---------------------------------------------------
+         * 5. REPORT GENERATION & RADAR CHART
+         * --------------------------------------------------- */
+        function generateReportFromWizard() {
+            // Calculate Scores
+            const optLife = wizardSteps[1].options[wizardData.lifeLine];
+            const optHead = wizardSteps[2].options[wizardData.headLine];
+            const optHeart = wizardSteps[3].options[wizardData.heartLine];
+            const optFate = wizardSteps[4].options[wizardData.fateLine];
+
+            const scores = {
+                vitality: Math.round((optLife.score.vitality + optLife.score.health) / 2),
+                work: optHead.score.work,
+                love: optHeart.score.love,
+                fate: optFate.score.fate,
+                intuition: Math.round((optHead.score.intelligence + optHeart.score.emotion) / 2)
+            };
+
+            const totalScore = Math.round((scores.vitality + scores.work + scores.love + scores.fate + scores.intuition) / 5);
+
+            // Update UI
+            document.getElementById('result-hand-type').innerText = `${wizardData.hand === 'left' ? '左手鑑定（生まれ持った資質）' : '右手鑑定（後天的な運と未来）'}`;
+            document.getElementById('result-score-text').innerText = `${totalScore} / 100`;
+
+            let badgeTitle = "バランス万能タイプ";
+            if (totalScore >= 90) badgeTitle = "強運のカリスマタイプ";
+            else if (scores.work > 90) badgeTitle = "事業・頭脳開眼タイプ";
+            else if (scores.love > 90) badgeTitle = "愛と調和のヒーラータイプ";
+            document.getElementById('result-type-badge').innerText = badgeTitle;
+
+            // Categories HTML
+            const catContainer = document.getElementById('result-categories');
+            catContainer.innerHTML = `
+                <div class="glass-card p-4 rounded-xl space-y-1">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-mystic-rose flex items-center"><i class="fa-solid fa-heart mr-1.5"></i> 恋愛・人間関係運</span>
+                        <span class="text-xs font-mono font-bold text-white">${scores.love}点</span>
+                    </div>
+                    <p class="text-xs text-gray-300 leading-relaxed pt-1">${optHeart.desc}</p>
+                </div>
+                <div class="glass-card p-4 rounded-xl space-y-1">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-cyan-400 flex items-center"><i class="fa-solid fa-briefcase mr-1.5"></i> 仕事・才能運</span>
+                        <span class="text-xs font-mono font-bold text-white">${scores.work}点</span>
+                    </div>
+                    <p class="text-xs text-gray-300 leading-relaxed pt-1">${optHead.desc}</p>
+                </div>
+                <div class="glass-card p-4 rounded-xl space-y-1">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-emerald-400 flex items-center"><i class="fa-solid fa-bolt mr-1.5"></i> 健康・生命エネルギー</span>
+                        <span class="text-xs font-mono font-bold text-white">${scores.vitality}点</span>
+                    </div>
+                    <p class="text-xs text-gray-300 leading-relaxed pt-1">${optLife.desc}</p>
+                </div>
+                <div class="glass-card p-4 rounded-xl space-y-1">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-mystic-accent flex items-center"><i class="fa-solid fa-crown mr-1.5"></i> 人生・運命転機</span>
+                        <span class="text-xs font-mono font-bold text-white">${scores.fate}点</span>
+                    </div>
+                    <p class="text-xs text-gray-300 leading-relaxed pt-1">${optFate.desc}</p>
+                </div>
+            `;
+
+            // Lucky Items
+            const luckyColors = ["ゴールド", "ロイヤルブルー", "ヴァイオレット", "ローズピンク", "エメラルドグリーン"];
+            const luckyItems = ["天然石のブレスレット", "クラシックなノート", "アロマオイル", "シルバーのリング", "お気に入りの観葉植物"];
+            const luckyAdvices = [
+                "直感を信じて行動することで新たな才能が開花します。身近な人への感謝を言葉にすると金運アップ。",
+                "少し休養を取り、自分の時間を大切にすることでエネルギーが充填されます。朝の深呼吸が幸運を呼びます。",
+                "新しい挑戦を始めるのに最適なタイミングです。温めていたアイデアを周囲に共有してみましょう。"
+            ];
+
+            document.getElementById('lucky-color').innerText = luckyColors[totalScore % luckyColors.length];
+            document.getElementById('lucky-item').innerText = luckyItems[totalScore % luckyItems.length];
+            document.getElementById('lucky-advice').innerText = luckyAdvices[totalScore % luckyAdvices.length];
+
+            // Render Chart
+            renderRadarChart(scores);
+
+            // Save to History
+            saveToHistory({
+                date: new Date().toLocaleDateString('ja-JP'),
+                score: totalScore,
+                badge: badgeTitle,
+                hand: wizardData.hand
+            });
+
+            switchTab('result');
+        }
+
+        function renderRadarChart(scores) {
+            const canvas = document.getElementById('radarChart');
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width;
+            const h = canvas.height;
+            const centerX = w / 2;
+            const centerY = h / 2;
+            const radius = 80;
+
+            ctx.clearRect(0, 0, w, h);
+
+            const labels = ["生命力", "仕事", "恋愛", "運命", "直感"];
+            const dataValues = [scores.vitality, scores.work, scores.love, scores.fate, scores.intuition];
+            const numPoints = labels.length;
+
+            // Draw Web Grid
+            ctx.strokeStyle = "rgba(212, 175, 55, 0.2)";
+            ctx.lineWidth = 1;
+
+            for (let level = 1; level <= 4; level++) {
+                const r = (radius / 4) * level;
+                ctx.beginPath();
+                for (let i = 0; i < numPoints; i++) {
+                    const angle = (Math.PI * 2 / numPoints) * i - Math.PI / 2;
+                    const x = centerX + r * Math.cos(angle);
+                    const y = centerY + r * Math.sin(angle);
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.closePath();
+                ctx.stroke();
+            }
+
+            // Draw Axis Lines & Labels
+            ctx.fillStyle = "#E2E8F0";
+            ctx.font = "10px sans-serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+
+            for (let i = 0; i < numPoints; i++) {
+                const angle = (Math.PI * 2 / numPoints) * i - Math.PI / 2;
+                const x = centerX + radius * Math.cos(angle);
+                const y = centerY + radius * Math.sin(angle);
+
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.lineTo(x, y);
+                ctx.stroke();
+
+                // Label Position
+                const lx = centerX + (radius + 20) * Math.cos(angle);
+                const ly = centerY + (radius + 15) * Math.sin(angle);
+                ctx.fillText(labels[i], lx, ly);
+            }
+
+            // Draw Data Polygon
+            ctx.beginPath();
+            for (let i = 0; i < numPoints; i++) {
+                const angle = (Math.PI * 2 / numPoints) * i - Math.PI / 2;
+                const val = dataValues[i] / 100;
+                const x = centerX + radius * val * Math.cos(angle);
+                const y = centerY + radius * val * Math.sin(angle);
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+
+            // Fill
+            ctx.fillStyle = "rgba(157, 78, 221, 0.4)";
+            ctx.fill();
+            ctx.strokeStyle = "#D4AF37";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Draw Dots
+            for (let i = 0; i < numPoints; i++) {
+                const angle = (Math.PI * 2 / numPoints) * i - Math.PI / 2;
+                const val = dataValues[i] / 100;
+                const x = centerX + radius * val * Math.cos(angle);
+                const y = centerY + radius * val * Math.sin(angle);
+
+                ctx.beginPath();
+                ctx.arc(x, y, 4, 0, Math.PI * 2);
+                ctx.fillStyle = "#FFD700";
+                ctx.fill();
+            }
+        }
+
+        /* ---------------------------------------------------
+         * 6. HAND MAP & DETAILS
+         * --------------------------------------------------- */
+        const mapDetails = {
+            jupiter: { name: "木星丘（人差し指の下）", badge: "野心・リーダーシップ", desc: "向上心や野望、指導力を象徴するエリア。ここが豊かに膨らんでいる人は、目標達成力が高く独立心にあふれています。" },
+            saturn: { name: "土星丘（中指の下）", badge: "探究心・自制心", desc: "思慮深さや努力、研究熱心さを司るエリア。落ち着きがあり専門分野で深く功績を残す人に発達します。" },
+            sun: { name: "太陽丘（薬指の下）", badge: "人気・芸術・財運", desc: "名声、魅力、成功、金運を司る輝かしいエリア。ここが明るく張りがある人は人徳があり魅力的です。" },
+            venus: { name: "金星丘（親指の付け根）", badge: "愛情・生命力", desc: "スタミナ、健康、情熱、家族愛を司る土台となる丘。ここが肉厚な人はエネルギー満点で温かい愛情の持ち主です。" },
+            moon: { name: "月丘（小指側の手首寄り）", badge: "直感・想像力・人気", desc: "ロマンや芸術的感性、直感を司る神秘的なエリア。ここから伸びる線が多い人はクリエイティブな仕事に適しています。" },
+            life: { name: "生命線", badge: "健康・生命力", desc: "親指を囲む線。身体の強さ、スタミナ、寿命の傾向を示します。太く長いほど健康的で強運とされます。" },
+            head: { name: "頭脳線", badge: "思考パターン・適職", desc: "手のひら中央を伸びる線。考え方のクセ、理系・文系傾向、判断力のスタイルが表れます。" },
+            heart: { name: "感情線", badge: "恋愛・人間関係", desc: "感情の表現方法や恋愛のスタイル、他者への思いやりの深さを象徴します。" },
+            fate: { name: "運命線", badge: "仕事・人生の転機", desc: "目標に向かって開運していくエネルギーを示す縦線。仕事運や生きがいの変化を読み取れます。" }
+        };
+
+        function showMapDetail(key) {
+            playSound(650, 0.08);
+            const detail = mapDetails[key];
+            if (!detail) return;
+
+            document.getElementById('map-detail-title').innerText = detail.name;
+            document.getElementById('map-detail-badge').innerText = detail.badge;
+            document.getElementById('map-detail-desc').innerText = detail.desc;
+        }
+
+        /* ---------------------------------------------------
+         * 7. SHARE & CANVAS GENERATION
+         * --------------------------------------------------- */
+        function shareOrSaveResult() {
+            playSound(800, 0.15);
+            const canvas = document.getElementById('shareCanvas');
+            canvas.width = 600;
+            canvas.height = 800;
+            const ctx = canvas.getContext('2d');
+
+            // Background
+            ctx.fillStyle = "#0B0719";
+            ctx.fillRect(0, 0, 600, 800);
+
+            // Border
+            ctx.strokeStyle = "#D4AF37";
+            ctx.lineWidth = 8;
+            ctx.strokeRect(20, 20, 560, 760);
+
+            // Text Header
+            ctx.fillStyle = "#D4AF37";
+            ctx.font = "bold 32px 'Noto Serif JP', serif";
+            ctx.textAlign = "center";
+            ctx.fillText("手相鑑定 総合診断書", 300, 100);
+
+            ctx.fillStyle = "#E2E8F0";
+            ctx.font = "20px sans-serif";
+            ctx.fillText(`鑑定日時: ${new Date().toLocaleDateString('ja-JP')}`, 300, 150);
+
+            // Score Box
+            ctx.fillStyle = "rgba(46, 34, 94, 0.8)";
+            ctx.fillRect(100, 200, 400, 140);
+            ctx.strokeStyle = "rgba(212, 175, 55, 0.5)";
+            ctx.strokeRect(100, 200, 400, 140);
+
+            ctx.fillStyle = "#FFD700";
+            ctx.font = "bold 48px sans-serif";
+            const scoreText = document.getElementById('result-score-text').innerText;
+            ctx.fillText(scoreText, 300, 260);
+
+            ctx.fillStyle = "#E2E8F0";
+            ctx.font = "bold 22px sans-serif";
+            const badgeText = document.getElementById('result-type-badge').innerText;
+            ctx.fillText(`タイプ: ${badgeText}`, 300, 310);
+
+            // Advice Section
+            ctx.fillStyle = "#9D4EDD";
+            ctx.font = "bold 22px sans-serif";
+            ctx.fillText("【 開運メッセージ 】", 300, 420);
+
+            ctx.fillStyle = "#CBD5E1";
+            ctx.font = "18px sans-serif";
+            const adviceText = document.getElementById('lucky-advice').innerText;
+
+            // Wrap Text
+            const words = adviceText.split('');
+            let line = '';
+            let y = 470;
+            for (let n = 0; n < words.length; n++) {
+                let testLine = line + words[n];
+                let metrics = ctx.measureText(testLine);
+                if (metrics.width > 480 && n > 0) {
+                    ctx.fillText(line, 300, y);
+                    line = words[n];
+                    y += 32;
+                } else {
+                    line = testLine;
+                }
+            }
+            ctx.fillText(line, 300, y);
+
+            // Footer
+            ctx.fillStyle = "#94A3B8";
+            ctx.font = "16px sans-serif";
+            ctx.fillText("PALMISTRY AI - 手相で紐解く、あなたの運命", 300, 730);
+
+            // Open in image window
+            const imageURI = canvas.toDataURL("image/png");
+            const win = window.open();
+            if (win) {
+                win.document.write(`<title>手相鑑定書</title><img src="${imageURI}" style="max-width:100%; height:auto;"/>`);
+            } else {
+                alert("画像が生成されました。長押しで保存してください。");
+            }
+        }
+
+        /* ---------------------------------------------------
+         * 8. HISTORY MANAGEMENT (LOCAL STORAGE)
+         * --------------------------------------------------- */
+        function saveToHistory(item) {
+            let history = JSON.parse(localStorage.getItem('palm_history') || '[]');
+            history.unshift(item);
+            if (history.length > 10) history = history.slice(0, 10);
+            localStorage.setItem('palm_history', JSON.stringify(history));
+        }
+
+        function loadHistoryView() {
+            const list = document.getElementById('history-list');
+            let history = JSON.parse(localStorage.getItem('palm_history') || '[]');
+            
+            if (history.length === 0) {
+                list.innerHTML = `<div class="text-center text-xs text-gray-400 py-8">鑑定履歴はありません</div>`;
+                return;
+            }
+
+            list.innerHTML = '';
+            history.forEach(h => {
+                const item = document.createElement('div');
+                item.className = "glass-card p-3 rounded-xl flex items-center justify-between border-gray-800";
+                item.innerHTML = `
+                    <div>
+                        <span class="text-[10px] text-gray-400">${h.date} (${h.hand === 'left' ? '左手' : '右手'})</span>
+                        <h4 class="text-xs font-bold text-white">${h.badge}</h4>
+                    </div>
+                    <span class="text-sm font-mono font-bold text-mystic-accent">${h.score}点</span>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        function clearHistory() {
+            localStorage.removeItem('palm_history');
+            loadHistoryView();
+        }
+
+        /* ---------------------------------------------------
+         * 9. INITIALIZATION
+         * --------------------------------------------------- */
+        window.onload = function() {
+            // Setup Daily Fortune Tip
+            const today = new Date();
+            const dateStr = `${today.getMonth() + 1}月${today.getDate()}日`;
+            document.getElementById('daily-date').innerText = dateStr;
+
+            const dailyTips = [
+                { title: "二重生命線のある日", desc: "体力・バイタリティが急上昇中。新しいスポーツや運動を始めると運気がさらに開けます。" },
+                { title: "感情線が伸びる日", desc: "対人運が良好です。感謝の気持ちを周りの人に伝えると予期せぬ幸運が舞い込みます。" },
+                { title: "太陽丘が輝く日", desc: "創造性と直感が高まっています。芸術鑑賞や趣味のプロジェクトに没頭すると大吉。" }
+            ];
+            const tip = dailyTips[today.getDate() % dailyTips.length];
+            document.getElementById('daily-title').innerText = tip.title;
+            document.getElementById('daily-desc').innerText = tip.desc;
+        };
+    </script>
+</body>
+</html>
