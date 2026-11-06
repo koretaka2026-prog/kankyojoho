@@ -3,117 +3,191 @@
 <head>
   <meta charset="UTF-8">
   <!-- スマホの画面幅に合わせて自動リサイズさせるための必須タグ -->
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>モバイルメニュー</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>あそびメニュー</title>
   <style>
-    /* 全体のアタリを調整 */
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
     }
 
+    :root {
+      --ink: #1f2a44;
+      --bg-top: #fff4c2;
+      --bg-bottom: #c9f0ff;
+    }
+
     body {
-      background-color: #020617; /* 全体背景（メニューとなじむダークカラー） */
-      padding: 16px;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
+      padding: max(20px, env(safe-area-inset-top)) 16px max(32px, env(safe-area-inset-bottom));
+      background:
+        radial-gradient(circle at 12% 8%, rgba(255, 255, 255, 0.9) 0 60px, transparent 61px),
+        radial-gradient(circle at 92% 22%, rgba(255, 255, 255, 0.7) 0 44px, transparent 45px),
+        linear-gradient(180deg, var(--bg-top), var(--bg-bottom));
+      background-attachment: fixed;
+      color: var(--ink);
+      font-family: "Hiragino Maru Gothic ProN", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    .wrap {
+      width: 100%;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 30px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      margin: 8px 0 22px;
+      text-shadow: 0 3px 0 #fff;
+    }
+
+    h1 .logo {
+      display: inline-block;
+      margin-right: 6px;
     }
 
     .mobile-menu {
-      width: 100%;       /* スマホ画面に合わせて可変 */
-      max-width: 440px;  /* タブレット・PCで広がりすぎない上限 */
-      margin: 0 auto;
-      padding: 16px;
-      background: #0f172a; /* 深みのあるダークブルー背景 */
-      border-radius: 20px;
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+      display: grid;
+      gap: 16px;
     }
 
     .mobile-menu a {
+      --c: #ff6b6b;   /* ボタンの色（下で順番に変更） */
+      --t: #ffe3e3;   /* アイコン背景の薄い色 */
+
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      font-size: 17px;         /* 指で視認しやすい少し大きめのサイズ */
-      min-height: 56px;        /* タップしやすい十分な高さ（指の接触面積を確保） */
-      padding: 12px 20px;
-      margin-bottom: 12px;
-      background: rgba(255, 255, 255, 0.05);
-      color: #f8fafc;
+      gap: 16px;
+      min-height: 84px;           /* 指でタップしやすい大きさ */
+      padding: 14px 18px 14px 14px;
+      background: #ffffff;
+      color: var(--ink);
       text-decoration: none;
-      border-radius: 14px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      font-weight: 600;
-      letter-spacing: 0.5px;
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-      backdrop-filter: blur(8px);
-      -webkit-tap-highlight-color: transparent; /* タップ時のデフォルト青枠ハイライトを消去 */
+      font-size: 20px;
+      font-weight: 800;
+      line-height: 1.35;
+      border: 3px solid var(--c);
+      border-radius: 28px;
+      box-shadow: 0 7px 0 var(--c);   /* ぷっくり立体の縁 */
+      transition: transform 0.12s ease, box-shadow 0.12s ease;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
     }
 
-    /* 最後の要素の下マージンを消去 */
-    .mobile-menu a:last-child {
-      margin-bottom: 0;
+    /* 絵文字アイコン */
+    .mobile-menu a .icon {
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+      width: 56px;
+      height: 56px;
+      font-size: 30px;
+      background: var(--t);
+      border-radius: 20px;
     }
 
-    /* 右側の矢印アイコン */
+    .mobile-menu a .label {
+      flex: 1 1 auto;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    /* 右側の矢印 */
     .mobile-menu a::after {
       content: '›';
-      font-size: 24px;
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+      width: 36px;
+      height: 36px;
+      font-size: 28px;
+      font-weight: 800;
       line-height: 1;
-      color: #38bdf8;
-      transition: transform 0.2s ease;
+      color: #fff;
+      background: var(--c);
+      border-radius: 50%;
+      padding-bottom: 3px;
     }
 
-    /* タップ・ホバー時の効果 */
-    .mobile-menu a:hover,
-    .mobile-menu a:focus {
-      background: rgba(56, 189, 248, 0.15);
-      border-color: rgba(56, 189, 248, 0.5);
-      color: #38bdf8;
-    }
+    /* カラーを順番に変えて楽しく */
+    .mobile-menu a:nth-child(6n+1) { --c: #ff6b6b; --t: #ffe3e3; }
+    .mobile-menu a:nth-child(6n+2) { --c: #ff9f1c; --t: #ffeccc; }
+    .mobile-menu a:nth-child(6n+3) { --c: #f2b705; --t: #fff3bf; }
+    .mobile-menu a:nth-child(6n+4) { --c: #2bb673; --t: #d3f5e4; }
+    .mobile-menu a:nth-child(6n+5) { --c: #2d9cdb; --t: #d6edfb; }
+    .mobile-menu a:nth-child(6n+6) { --c: #9b6bff; --t: #e8dcff; }
 
-    /* タップした瞬間（スマホ操作で最も重要なレスポンス） */
+    /* 押した瞬間にボタンが沈む */
     .mobile-menu a:active {
-      transform: scale(0.98);
-      background: rgba(56, 189, 248, 0.25);
+      transform: translateY(6px);
+      box-shadow: 0 1px 0 var(--c);
     }
 
-    .mobile-menu a:active::after {
-      transform: translateX(4px);
+    .mobile-menu a:focus-visible {
+      outline: 4px solid var(--ink);
+      outline-offset: 3px;
+    }
+
+    @media (hover: hover) {
+      .mobile-menu a:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 0 var(--c);
+      }
+      .mobile-menu a:active {
+        transform: translateY(6px);
+        box-shadow: 0 1px 0 var(--c);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .mobile-menu a { transition: none; }
+    }
+
+    /* 小さめのスマホ */
+    @media (max-width: 360px) {
+      h1 { font-size: 26px; }
+      .mobile-menu a { font-size: 18px; min-height: 78px; gap: 12px; }
+      .mobile-menu a .icon { width: 48px; height: 48px; font-size: 26px; }
     }
   </style>
 </head>
 <body>
 
-<div class="mobile-menu">
-    <a href="GitHub使用方法.pdf">GitHub使用方法</a>
-    <a href="https://koretaka2026-prog.github.io/index/count_sheep.html">羊を数える</a>
-    <a href="https://koretaka2026-prog.github.io/index/super_runner_bros.html">Super runner bros.</a>
-    <a href="https://koretaka2026-prog.github.io/index/guitar.html">ギター</a>
-    <a href="v4sawatsubashiIndex.html">ギター(ver. 2)</a>
-    <a href="https://koretaka2026-prog.github.io/index/flick_tetris.html">フリックテトリス</a>
-    <a href="https://koretaka2026-prog.github.io/index/privacy_checker.html">漏えい情報確認</a>
-    <a href="Deep_Breath-Ver3.html">マインドフル呼吸</a>
-    <a href="サルは羽ばたき空を飛ぶ.html">サルは羽ばたき空を飛ぶ</a>
-    <a href="イルカは羽ばたき空を超えその先を見た2.html">イルカは羽ばたき空を超えその先を見た</a>
-    <a href="ar_sky_navi.html">AR Sky Navi</a>
-    <a href="3d_voxel_craftsman.html">3D Voxel Craftsman</a>
-    <a href="飛行艇2.html">飛行艇</a>
-    <a href="飛行艇2-3_kinosita.html">飛行艇(ver. 2)</a>
-    <a href="オデッセイ.html">オデッセイ</a>
-    <a href="江戸探索.html">江戸探索</a>
-    <a href="3D-gameV2_kinosita.html">フォレスト・スピリット3D</a>
-    <a href="forest_spirit_3d_realistic.html">フォレスト・スピリット3D(Claudeバージョン)</a>
-    <a href="palmistry_ai.html">手相鑑定</a>
-    <a href="https://koretaka2026-prog.github.io/index/absolute_pitch.html">絶対音感・音当てゲーム</a>
-    <a href="https://koretaka2026-prog.github.io/index/chord_playing.html">コード演奏</a>
-    <a href="https://koretaka2026-prog.github.io/index/drum.html">ドラム</a>
-    <a href="https://koretaka2026-prog.github.io/index/pulse_beat_studio.html">Pulse Beat studio</a>
-    <a href="https://koretaka2026-prog.github.io/index/breath_of_the_wild.html">野生の大地</a>
-    <a href="no_terminal.html">零下終着線(Claudeバージョン)</a>
+<div class="wrap">
+  <h1><span class="logo">🎈</span>あそびメニュー</h1>
+
+  <nav class="mobile-menu">
+    <a href="GitHub使用方法.pdf"><span class="icon">📘</span><span class="label">GitHub使用方法</span></a>
+    <a href="https://koretaka2026-prog.github.io/index/count_sheep.html"><span class="icon">🐑</span><span class="label">羊を数える</span></a>
+    <a href="https://koretaka2026-prog.github.io/index/super_runner_bros.html"><span class="icon">🏃</span><span class="label">Super runner bros.</span></a>
+    <a href="https://koretaka2026-prog.github.io/index/guitar.html"><span class="icon">🎸</span><span class="label">ギター</span></a>
+    <a href="v4sawatsubashiIndex.html"><span class="icon">🎸</span><span class="label">ギター(ver. 2)</span></a>
+    <a href="https://koretaka2026-prog.github.io/index/flick_tetris.html"><span class="icon">🧩</span><span class="label">フリックテトリス</span></a>
+    <a href="https://koretaka2026-prog.github.io/index/privacy_checker.html"><span class="icon">🔒</span><span class="label">漏えい情報確認</span></a>
+    <a href="Deep_Breath-Ver3.html"><span class="icon">🧘</span><span class="label">マインドフル呼吸</span></a>
+    <a href="サルは羽ばたき空を飛ぶ.html"><span class="icon">🐒</span><span class="label">サルは羽ばたき空を飛ぶ</span></a>
+    <a href="イルカは羽ばたき空を超えその先を見た2.html"><span class="icon">🐬</span><span class="label">イルカは羽ばたき空を超えその先を見た</span></a>
+    <a href="ar_sky_navi.html"><span class="icon">🔭</span><span class="label">AR Sky Navi</span></a>
+    <a href="3d_voxel_craftsman.html"><span class="icon">🧱</span><span class="label">3D Voxel Craftsman</span></a>
+    <a href="飛行艇2.html"><span class="icon">✈️</span><span class="label">飛行艇</span></a>
+    <a href="飛行艇2-3_kinosita.html"><span class="icon">🛩️</span><span class="label">飛行艇(ver. 2)</span></a>
+    <a href="オデッセイ.html"><span class="icon">🚀</span><span class="label">オデッセイ</span></a>
+    <a href="江戸探索.html"><span class="icon">🏯</span><span class="label">江戸探索</span></a>
+    <a href="3D-gameV2_kinosita.html"><span class="icon">🌲</span><span class="label">フォレスト・スピリット3D</span></a>
+    <a href="forest_spirit_3d_realistic.html"><span class="icon">🌳</span><span class="label">フォレスト・スピリット3D(Claudeバージョン)</span></a>
+    <a href="palmistry_ai.html"><span class="icon">🖐️</span><span class="label">手相鑑定</span></a>
+    <a href="https://koretaka2026-prog.github.io/index/absolute_pitch.html"><span class="icon">🎵</span><span class="label">絶対音感・音当てゲーム</span></a>
+    <a href="https://koretaka2026-prog.github.io/index/chord_playing.html"><span class="icon">🎹</span><span class="label">コード演奏</span></a>
+    <a href="https://koretaka2026-prog.github.io/index/drum.html"><span class="icon">🥁</span><span class="label">ドラム</span></a>
+    <a href="https://koretaka2026-prog.github.io/index/pulse_beat_studio.html"><span class="icon">🎧</span><span class="label">Pulse Beat studio</span></a>
+    <a href="https://koretaka2026-prog.github.io/index/breath_of_the_wild.html"><span class="icon">🏞️</span><span class="label">野生の大地</span></a>
+    <a href="no_terminal.html"><span class="icon">🚆</span><span class="label">零下終着線(Claudeバージョン)</span></a>
+  </nav>
 </div>
 
 </body>
