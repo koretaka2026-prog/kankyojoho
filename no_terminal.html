@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>零下終着線 NO TERMINAL</title>
+<style>
+:root{color-scheme:dark;--fg:#e6e2d8;--bg:#000;--glass:rgba(18,26,32,.55)}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;font-family:"Yu Mincho","Hiragino Mincho ProN","Noto Serif JP",serif}
+canvas{position:fixed;inset:0;width:100%;height:100%}
+.fx{position:fixed;inset:0;pointer-events:none}
+#vg{background:radial-gradient(ellipse at center,transparent 42%,rgba(0,0,0,.88) 100%)}
+#frost{opacity:0;background:radial-gradient(ellipse at center,transparent 35%,rgba(190,225,245,.5) 100%);mix-blend-mode:screen}
+#flash{opacity:0;background:radial-gradient(circle,#b8d8ff,#401018)}
+.ui{position:fixed;pointer-events:none;text-shadow:0 1px 5px #000,0 0 2px #000}
+#hud{top:calc(env(safe-area-inset-top,0px) + 10px);left:calc(env(safe-area-inset-left,0px) + 14px);font-size:13px;line-height:1.7;max-width:70vw}
+#inv{top:calc(env(safe-area-inset-top,0px) + 10px);right:calc(env(safe-area-inset-right,0px) + 14px);font-size:12px;text-align:right;opacity:.8}
+#prompt{left:50%;transform:translateX(-50%);bottom:30%;font-size:16px;opacity:0;transition:opacity .2s;white-space:nowrap}
+#note{left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 14px);font-size:14px;opacity:0;transition:opacity .5s;text-align:center;width:min(86vw,560px)}
+#big{inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;transition:opacity 1s;text-align:center}
+#big b{font-size:clamp(22px,5vw,38px);letter-spacing:.2em}#big span{font-size:14px;margin-top:10px;opacity:.85}
+.btn{position:fixed;border-radius:50%;border:1.5px solid rgba(255,255,255,.35);background:var(--glass);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);color:#fff;font:inherit;font-size:15px;touch-action:none}
+#bAct{width:84px;height:84px;right:calc(env(safe-area-inset-right,0px) + 26px);bottom:calc(env(safe-area-inset-bottom,0px) + 30px)}
+#bWorld{display:none;width:62px;height:62px;right:calc(env(safe-area-inset-right,0px) + 122px);bottom:calc(env(safe-area-inset-bottom,0px) + 40px);font-size:13px}
+#ring,#knob{position:fixed;border-radius:50%;display:none;pointer-events:none;border:1.5px solid rgba(255,255,255,.3)}
+#ring{width:110px;height:110px;margin:-55px 0 0 -55px;background:rgba(255,255,255,.05)}
+#knob{width:48px;height:48px;margin:-24px 0 0 -24px;background:rgba(255,255,255,.25)}
+.scr{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;box-sizing:border-box;background:rgba(0,0,0,.82);z-index:9}
+#title{background:radial-gradient(ellipse at center,#14222c,#000 75%)}
+#title h1{font-size:clamp(40px,11vw,84px);margin:0;letter-spacing:.18em;font-weight:700}
+#title h2{font-size:clamp(12px,3vw,18px);letter-spacing:.7em;margin:6px 0 28px;font-weight:400;opacity:.7}
+#title p{font-size:13px;opacity:.7;line-height:1.8;max-width:420px}
+.go{margin-top:22px;padding:14px 44px;font:inherit;font-size:18px;letter-spacing:.3em;color:#fff;background:rgba(120,170,200,.18);border:1px solid rgba(180,220,240,.5);border-radius:2px}
+#doc{display:none}#doc h3{letter-spacing:.2em;margin:0 0 14px}#doc p{max-width:460px;line-height:2;font-size:15px;white-space:pre-wrap;margin:0}
+</style></head><body>
+<canvas id="cv"></canvas><div id="frost" class="fx"></div><div id="vg" class="fx"></div><div id="flash" class="fx"></div>
+<div id="hud" class="ui"></div><div id="inv" class="ui"></div><div id="prompt" class="ui"></div><div id="note" class="ui"></div>
+<div id="big" class="ui"><b></b><span></span></div>
+<div id="ring"></div><div id="knob"></div>
+<button class="btn" id="bWorld">裏世界</button><button class="btn" id="bAct">調べる</button>
+<div id="doc" class="scr"><h3 id="dt"></h3><p id="db"></p><p style="opacity:.5;margin-top:22px;font-size:12px">タップで閉じる</p></div>
+<div id="title" class="scr"><h1>零下終着線</h1><h2>NO TERMINAL</h2>
+<p>終点のない列車の中を歩き、凍りついた記録を辿る。<br>左側ドラッグで移動／右側ドラッグで視点／「調べる」ボタンで操作。<br>PC：WASD・矢印・E（調べる）・Y（裏世界）。画面を横向きにすると遊びやすくなります。</p>
+<button class="go" id="start">はじめる</button></div>
+<script>
+const $=id=>document.getElementById(id),cv=$('cv'),cx=cv.getContext('2d'),clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const FOV=66*Math.PI/180,MW=45,MH=13;
+let RW,RH,proj,img,zb,OFF,CS,IC,DX=[],DY=[];
+// ---------- マップ ----------
+function build(w){const g=[];for(let y=0;y<MH;y++)g.push(Array(MW).fill('1'));const e=w?43:35;
+for(let y=2;y<11;y++)for(let x=1;x<=e;x++)g[y][x]='.';
+for(let x=1;x<=e;x++){g[1][x]='W';g[11][x]='W'}
+for(const d of[8,15,22,29,36]){if(d>e)continue;for(let y=2;y<11;y++)g[y][d]='2';g[6][d]='D'}
+for(let x=2;x<6;x++)g[3][x]='3';g[3][4]='.';
+for(const[x,y]of[[10,4],[12,4],[10,8],[12,8]])g[y][x]='4';
+for(let y=2;y<6;y++)g[y][18]='5';g[4][18]='.';
+if(!w){for(const x of[24,27]){for(let y=2;y<5;y++)g[y][x]='6';for(let y=8;y<11;y++)g[y][x]='6'}g[6][25]='7';g[6][26]='7'}
+else{for(const x of[24,27])for(let y=5;y<8;y++)g[y][x]='6';g[3][25]='.';g[3][26]='.'}
+for(const[x,y]of[[31,4],[33,4],[31,8],[33,8]])g[y][x]='8';
+if(w){for(let x=37;x<43;x++)for(let y=3;y<10;y++)g[y][x]='.';for(let x=37;x<43;x++){g[2][x]='9';g[10][x]='9'}g[6][40]='A'}
+return g.map(r=>r.join(''))}
+const grids={n:build(0),w:build(1)};
+const doors={'8,6':{p:0,lock:0},'15,6':{p:0,lock:1},'22,6':{p:0,lock:1},'29,6':{p:0,lock:1},'36,6':{p:0,lock:1}};
+// ---------- テクスチャ（手続き生成） ----------
+const PAL={'1':['wood',[84,66,50]],'2':['wood',[112,84,56]],'3':['steel',[78,86,90]],'4':['crate',[120,86,52]],'5':['tile',[168,166,152]],'6':['wood',[96,66,52]],'7':['rubble',[70,66,62]],'8':['steel',[150,122,70]],'9':['steel',[50,50,58]],'A':['steel',[120,40,44]],'W':['glass',[0,0,0]],'D':['door',[104,72,46]],'F':['floor',[78,58,40]],'K':['carpet',[96,28,30]],'C':['ceil',[150,146,132]]};
+const TX={n:{},w:{}};
+const hh=(x,y,s)=>{const n=Math.sin(x*127.1+y*311.7+s*74.7)*43758.5453;return n-Math.floor(n)};
+function vn(x,y,s,P){const xi=Math.floor(x),yi=Math.floor(y),xf=x-xi,yf=y-yi,u=xf*xf*(3-2*xf),v=yf*yf*(3-2*yf),m=k=>((k%P)+P)%P,a=hh(m(xi),m(yi),s),b=hh(m(xi+1),m(yi),s),c=hh(m(xi),m(yi+1),s),d=hh(m(xi+1),m(yi+1),s);return a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v}
+function gen(code,w){const[p,c0]=PAL[code],t=new Uint8ClampedArray(16384);
+for(let v=0;v<64;v++)for(let u=0;u<64;u++){
+const n=vn(u/8,v/8,1,8)*.5+vn(u/4,v/4,2,16)*.3+vn(u/2,v/2,3,32)*.2,g=hh(u,v,7);let b=.6+n*.6,c=c0.slice();
+if(p==='wood'||p==='door'){const pl=u%16,gr=Math.sin(v*.3+n*8+(u>>4)*2.7)*.5+.5;b=.5+gr*.4+n*.3;if(pl<1.2||pl>14.8)b*=.3;
+ if(code==='2'&&(v%32<3||v%32>29))b*=1.35;
+ if(p==='door'){b=.55+gr*.3+n*.3;if(u<5||u>58||v<5||v>58||Math.abs(v-32)<1)b*=.45;if(u>48&&u<53&&v>28&&v<36){c=[200,160,74];b=1.1}}}
+else if(p==='crate'){const pl=v%16,gr=Math.sin(u*.25+n*7+(v>>4)*3)*.5+.5;b=.45+gr*.4+n*.3;if(pl<1.5)b*=.3;if(Math.abs(u-v)<3||Math.abs(u+v-63)<3)b*=.8}
+else if(p==='floor'){const pl=v%16,gr=Math.sin(u*.18+n*6+(v>>4)*4.1)*.5+.5;b=.4+gr*.4+n*.35;if(pl<1.2)b*=.3}
+else if(p==='carpet'){b=((u+v)%4<2?1:.86)*(.5+n*.55);if(v<4||v>59){c=[150,118,50];b=.7+n*.3}}
+else if(p==='ceil'){b=.62+n*.3;if(u%32<1.5||v%32<1.5)b*=.5}
+else if(p==='steel'){b=(.4+n*.5)*(.9+.1*hh(u,0,5));const dx=u%16-8,dy=v%16-8;if(dx*dx+dy*dy<4)b*=1.55;if(v%32<1)b*=.5;const r=vn(u/8,v/8,9,8);if(r>.6&&code!=='8'){c=[130,70,35];b*=.8+.4*r}}
+else if(p==='tile'){if(u%16<1||v%16<1)b=.32;else b=(.75+n*.3)*(((u>>4)+(v>>4))&1?1:.84)}
+else if(p==='rubble'){b=.2+vn(u/4,v/4,5,16)*.9+g*.15}
+else if(p==='glass'){const ed=Math.min(u,63-u,v,63-v);
+ if(u<5||u>58||v<4||v>59){c=[44,40,36];b=.5+n*.5}
+ else{c=[14+v*.2,22+v*.3,36+v*.45];b=1;if(hh(u,v,4)>.965)c=[240,245,255];
+  const fr=Math.min(1,Math.max(0,1-(ed-5)/14)*(.5+n*.9));c=[c[0]+(215-c[0])*fr,c[1]+(235-c[1])*fr,c[2]+(250-c[2])*fr];
+  if(w)c=[c[0]*1.3+20,c[1]*.6,c[2]*.7]}}
+if(w&&p!=='glass'){c=[c[0]*.8,c[1]*.62,c[2]*.7];b*=.82;if(vn(u/8,v/8,13,8)>.7){c=[110,20,24]}}
+const i=(v*64+u)*4;t[i]=c[0]*b;t[i+1]=c[1]*b;t[i+2]=c[2]*b;t[i+3]=255}
+return t}
+for(const w of['n','w'])for(const k in PAL)TX[w][k]=gen(k,w==='w');
+// ---------- スプライト ----------
+const K={engine:[1.1,0],gauge:[.35,.5],boy:[.82,0],crow:[.22,0],trunk:[.5,0],record:[.28,0],kettle:[.3,0],card:[.2,0],valve:[.4,.35],bell:[.2,.5],mirror:[.5,.45],console:[.7,0],board:[.5,.5],registry:[.55,.3],crate:[.5,0],suit:[.35,0],sack:[.4,0],table:[.5,0],cabinet:[.9,0],berth:[.8,0],seat:[.55,0],speaker:[.2,.7],rack:[.3,.7],bench:[.4,0],shovel:[.5,0]};
+const SP={};
+function mk(k){const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d');
+const B=(x,y,w,h,a,b)=>{const q=g.createLinearGradient(0,y,0,y+h);q.addColorStop(0,a);q.addColorStop(1,b);g.fillStyle=q;g.fillRect(x,y,w,h);g.strokeStyle='rgba(0,0,0,.55)';g.strokeRect(x+.5,y+.5,w-1,h-1)};
+const C=(x,y,r,a,b)=>{const q=g.createRadialGradient(x-r/3,y-r/3,1,x,y,r);q.addColorStop(0,a);q.addColorStop(1,b);g.fillStyle=q;g.beginPath();g.arc(x,y,r,0,7);g.fill()};
+const L=(a,b,c,d,w,s)=>{g.strokeStyle=s;g.lineWidth=w;g.beginPath();g.moveTo(a,b);g.lineTo(c,d);g.stroke()};
+switch(k){
+case'engine':B(14,6,36,56,'#50565a','#1c1f21');C(32,34,10,'#ffb04c','#6a2a08');B(14,54,36,8,'#2a2c2e','#111');break;
+case'gauge':C(32,32,26,'#d8d4c4','#6e6a5c');C(32,32,21,'#1c1e20','#0a0b0c');L(32,32,22,44,2,'#e04a3a');break;
+case'boy':B(23,28,18,26,'#566470','#222a31');B(25,52,6,12,'#1d2226','#0c0e10');B(33,52,6,12,'#1d2226','#0c0e10');C(32,20,9,'#dcc0aa','#80664f');B(23,9,18,7,'#2a2a2e','#111');B(23,28,18,4,'#8a2a2a','#4a1212');g.fillStyle='#111';g.fillRect(28,20,2,3);g.fillRect(35,20,2,3);break;
+case'crow':L(12,58,50,16,5,'#7a3a22');L(50,16,58,24,5,'#7a3a22');L(14,56,48,18,1.5,'#c9784a');break;
+case'trunk':B(6,26,52,36,'#6b4a2c','#2e1e10');B(6,34,52,4,'#2a2a2a','#111');B(27,40,10,9,'#b6923a','#5a4414');B(30,50,8,10,'#c8bfa0','#7a735c');break;
+case'record':B(12,14,40,48,'#d0cab4','#8a8470');for(let i=0;i<6;i++)L(18,22+i*7,46,22+i*7,1,'rgba(40,40,40,.5)');break;
+case'kettle':C(32,42,18,'#8a9aa4','#2c363c');B(46,32,10,4,'#6a7a84','#2a3238');B(25,20,14,6,'#7a8a94','#2c363c');g.fillStyle='rgba(230,245,255,.35)';g.beginPath();g.arc(32,42,18,0,7);g.fill();break;
+case'card':B(16,30,32,22,'#d6cdb0','#8a8268');L(22,38,42,38,1,'#443');L(22,44,38,44,1,'#443');break;
+case'valve':B(27,34,10,30,'#4a4a4a','#1a1a1a');C(32,26,16,'#b83c2c','#4a1410');C(32,26,5,'#222','#000');break;
+case'bell':C(32,38,16,'#d4ac52','#5a4210');B(29,10,6,12,'#6a5a2a','#2a2008');break;
+case'mirror':B(10,4,44,58,'#5a4a36','#241a10');B(16,10,32,46,'#9eb2bd','#2a3840');g.fillStyle='rgba(235,245,255,.3)';g.fillRect(16,10,32,46);break;
+case'console':B(8,22,48,42,'#3a4248','#14181b');B(14,28,36,18,'#10202a','#050a0e');B(16,30,32,14,'rgba(90,210,240,.55)','rgba(30,90,110,.5)');break;
+case'board':B(6,12,52,38,'#2c3238','#14181b');B(11,17,42,28,'#9fc0d0','#3e5560');L(16,36,48,24,2,'#223');break;
+case'registry':B(10,6,44,54,'#4a3524','#1d130b');B(16,12,32,42,'#d2cbb2','#8d8670');for(let i=0;i<7;i++)L(20,20+i*5,44,20+i*5,1,'rgba(30,30,30,.5)');break;
+case'crate':B(6,18,52,44,'#8a6236','#3c2812');L(6,18,58,62,2,'rgba(0,0,0,.35)');L(58,18,6,62,2,'rgba(0,0,0,.35)');break;
+case'suit':B(8,30,48,32,'#5e3c22','#241408');B(25,26,14,6,'#2a1a0e','#120a04');B(8,40,48,3,'#b99a4a','#6a5420');break;
+case'sack':C(32,44,20,'#b0a27e','#4a4232');B(26,12,12,14,'#a09470','#4a4232');break;
+case'table':B(4,24,56,8,'#8a6a46','#3a2814');B(10,32,5,30,'#3a2814','#1a1008');B(49,32,5,30,'#3a2814','#1a1008');break;
+case'cabinet':B(8,2,48,60,'#6e4e32','#2a1c10');B(12,8,18,48,'#7a5a3c','#34220f');B(34,8,18,48,'#7a5a3c','#34220f');break;
+case'berth':B(2,8,60,54,'#5a3e2c','#22160e');B(6,14,52,18,'#c8c0b0','#6a6458');B(6,38,52,18,'#c8c0b0','#6a6458');break;
+case'seat':B(14,6,36,32,'#74302f','#2a1012');B(8,36,48,16,'#843a3a','#2e1214');B(12,52,5,12,'#222','#000');B(47,52,5,12,'#222','#000');break;
+case'speaker':B(12,18,40,28,'#404040','#161616');C(32,32,9,'#222','#000');break;
+case'rack':B(2,26,60,5,'#9a9a9a','#3a3a3a');for(let i=0;i<10;i++)L(6+i*6,31,6+i*6,40,1,'#777');break;
+case'bench':B(2,26,60,12,'#6e4e32','#2a1c10');B(4,38,6,26,'#222','#000');B(54,38,6,26,'#222','#000');break;
+case'shovel':L(32,6,32,50,3,'#6a4a2a');B(22,48,20,14,'#555','#222');break}
+return g.getImageData(0,0,64,64).data}
+// ---------- オブジェクト ----------
+const OBJ=[
+['engine','engine',3.5,6,'b','機関炉',1,1],['gauge','gauge',5.3,6,'b','総合制御盤',1,1],
+['boy','boy',11.7,6.3,'b','荷物の少年',1,1],['crow','crow',10.15,6.75,'n','赤錆びたバール',1,1],
+['trunk','trunk',12.85,8.4,'b','荷札13のトランク',1,1],['rec1','record',12.35,8.15,'n','凍りついた乗客記録',0,1],
+['kettle','kettle',17.55,8.35,'b','凍ったティーポット',1,1],['plate','card',18,8.1,'n','座席札13',0,1],
+['steamD','valve',20.72,3.18,'n','食堂車の蒸気分岐弁',1,1],['bell','bell',26.35,3.12,'b','寝台呼び鈴',1,1],
+['smir','mirror',25.65,8.92,'b','寝台車の小鏡',1,1],['tag','card',27,3.35,'w','名前の消えた私物札',0,1],
+['cons','console',31,8.7,'b','車窓観測器',1,1],['route','board',32.15,3.08,'b','凍結した路線表示板',1,1],
+['stat','card',34,3.35,'w','零下駅の標示片',0,1],['reg','registry',40,3.4,'w','乗客名簿',1,1],
+['d1','valve',2.45,8.75,'b'],['d2','gauge',4.2,3.15,'b'],['d3','shovel',2.7,3.25,'n'],
+['d4','suit',10.55,3.35,'b'],['d5','suit',12.15,8.55,'b'],['d6','crate',13.1,3.45,'b'],['d7','sack',9.65,8.55,'b'],
+['d8','table',16.65,3.55,'b'],['d9','table',20.45,8.45,'b'],['d10','cabinet',19.45,3.25,'b'],
+['d11','berth',23.75,3.18,'b'],['d12','berth',27.35,8.82,'b'],['d13','bench',33.65,8.55,'b'],
+['d14','seat',25,8.7,'b'],['d15','seat',16.2,3.2,'b'],['d16','seat',20.6,8.8,'b'],['d17','seat',30.4,3.2,'b'],['d18','seat',34.2,8.8,'b'],
+['d19','speaker',7.15,3.12,'b'],['d20','speaker',14.05,3.12,'b'],['d21','speaker',21.15,8.88,'b'],['d22','speaker',28.05,3.12,'b'],['d23','speaker',34.85,3.12,'b'],
+['d24','rack',9.7,3.05,'b'],['d25','rack',13.65,8.95,'b']
+].map(r=>({id:r[0],k:r[1],x:r[2],y:r[3],w:r[4],l:r[5],a:r[6]===undefined?1:r[6],i:r[7]||0}));
+const O=Object.fromEntries(OBJ.map(o=>[o.id,o]));
+const LORE=['運行記録01：機関炉は列車を動かしていない。列車が止まらないよう説得している。','運行記録02：乗客名簿の十三番目は、毎晩ちがう筆跡で書き直される。','運行記録03：寝台車のカーテンを全部開けた。翌朝、寝台が一台増えていた。','運行記録04：無番号車両は最後尾ではない。列車の外側に連結されている。','運行記録05：終点に着いた者はいない。ただし、降りた者は数えられている。'];
+const MIS=['荷物車で少年を探す','荷札13のトランクを調べる','荷札13について少年に尋ねる','荷物車でバールを探す','荷札13のトランクをこじ開ける','トランク内の乗客記録を読む','食堂車のティーポットを調べる','食堂車の蒸気分岐弁を開く','解けたティーポットの座席札を取る','通常世界で寝台車の呼び鈴を押す','裏世界へ入り、呼び鈴を押す','裏世界で寝台車の小鏡を調べる','名前の消えた私物札を取る','車窓観測器を調べる','裏世界で路線表示板を調べる','零下駅の標示片を読む','裏世界の無番号車両で乗客名簿を読む','終点なし'];
+const CARS=[[1,7,'機関車',5],[8,14,'荷物車',0],[15,21,'食堂車',2],[22,28,'寝台車',1],[29,35,'展望車',-1],[36,44,'無番号車両',-7]];
+// ---------- 状態 ----------
+let px=5,py=7,ang=0,world='n',st=0,temp=8,bob=0,bt=0,flash=0,drop=0,paused=true,started=false,ended=false,target=null,jx=0,jy=0,stepT=0,lockT=0,last=0,inv=[];
+const keys={};
+// ---------- UI ----------
+let nT,bT;
+function note(s,ms=3400){const n=$('note');n.textContent=s;n.style.opacity=1;clearTimeout(nT);nT=setTimeout(()=>n.style.opacity=0,ms)}
+function big(t,s){const b=$('big');b.firstChild.textContent=t;b.lastChild.textContent=s;b.style.opacity=1;clearTimeout(bT);bT=setTimeout(()=>b.style.opacity=0,4200)}
+let docEnd=false;
+function doc(t,b,end){$('dt').textContent=t;$('db').textContent=b;$('doc').style.display='flex';paused=true;docEnd=!!end;snd('bell')}
+$('doc').addEventListener('pointerdown',()=>{$('doc').style.display='none';if(docEnd){ended=true;$('title').querySelector('h2').textContent='終点なし';$('title').querySelector('p').textContent='あなたの名前は、名簿に戻された。列車は、まだ走っている。';$('start').textContent='もう一度';$('title').style.display='flex'}else paused=false});
+// ---------- 音 ----------
+let AC,mg,NB;
+function audio(){try{AC=new(window.AudioContext||webkitAudioContext)();mg=AC.createGain();mg.gain.value=.8;mg.connect(AC.destination);
+const f=AC.createBiquadFilter();f.type='lowpass';f.frequency.value=140;const g=AC.createGain();g.gain.value=.07;[43,43.7,86.3].forEach(fr=>{const o=AC.createOscillator();o.type='sawtooth';o.frequency.value=fr;o.connect(f);o.start()});f.connect(g);g.connect(mg);
+NB=AC.createBuffer(1,AC.sampleRate*2,AC.sampleRate);const d=NB.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+const s=AC.createBufferSource();s.buffer=NB;s.loop=true;const bf=AC.createBiquadFilter();bf.type='bandpass';bf.frequency.value=500;const ng=AC.createGain();ng.gain.value=.03;s.connect(bf);bf.connect(ng);ng.connect(mg);s.start()}catch(e){}}
+function snd(k){if(!AC)return;try{const t=AC.currentTime,g=AC.createGain();g.connect(mg);
+if(k==='step'){const s=AC.createBufferSource();s.buffer=NB;const f=AC.createBiquadFilter();f.type='lowpass';f.frequency.value=220;s.connect(f);f.connect(g);g.gain.setValueAtTime(.35,t);g.gain.exponentialRampToValueAtTime(.001,t+.12);s.start(t,Math.random(),.15)}
+else{const o=AC.createOscillator(),sh=k==='shift';o.type=sh?'sawtooth':'sine';o.frequency.setValueAtTime(sh?90:660,t);o.frequency.exponentialRampToValueAtTime(sh?900:330,t+.9);o.connect(g);g.gain.setValueAtTime(.15,t);g.gain.exponentialRampToValueAtTime(.001,t+1);o.start(t);o.stop(t+1)}}catch(e){}}
+// ---------- 当たり判定・扉 ----------
+function solid(x,y,w=world){const c=(grids[w][y|0]||'')[x|0];if(c==='.')return false;if(c==='D'){const d=doors[(x|0)+','+(y|0)];return !d||d.p<.8}return true}
+const hit=(x,y)=>solid(x-.2,y-.2)||solid(x+.2,y-.2)||solid(x-.2,y+.2)||solid(x+.2,y+.2);
+function unlock(){const d=doors;d['15,6'].lock=st<6;d['22,6'].lock=st<9;d['29,6'].lock=st<13;d['36,6'].lock=st<16;$('bWorld').style.display=st>=9?'block':'none'}
+function adv(n){st=n;unlock()}
+// ---------- 調べる ----------
+function act(){const o=target;if(!o||paused)return;snd('pick');
+const give=s=>{if(!inv.includes(s))inv.push(s);$('inv').textContent=inv.join(' / ')};
+switch(o.id){
+case'engine':note(LORE[0]);break;
+case'gauge':note('針は零下を指したまま動かない。');break;
+case'boy':if(st===0){note('少年「…来たんだね。荷札13のトランクには、近づかないほうがいい。」');adv(1)}
+ else if(st===2){note('少年「十三人目は、最初から乗っていなかった。…ううん、名簿から消されたんだ。バールがあれば開くよ。」',5000);adv(3)}
+ else note('少年は小さくうなずいて、窓の外を見ている。');break;
+case'trunk':if(st===1){note('荷札には「13」。風もないのに、錆びた札が揺れている。');adv(2)}
+ else if(st===4){if(inv.includes('バール')){o.l='開いたトランク';O.rec1.a=1;note('バールを差し込むと、氷が砕けた。中に乗客記録がある。');adv(5)}else note('固く凍りついている。てこになる物が必要だ。')}
+ else if(st>4)note('トランクは空っぽだ。');else note('荷札13のトランク。今は触れないほうがいい気がする。');break;
+case'crow':give('バール');o.a=0;note('赤錆びたバールを拾った。');if(st===3)adv(4);break;
+case'rec1':o.a=0;doc('凍りついた乗客記録',LORE[0]+'\n\n十三番目の氏名だけが、名簿から削られている。');adv(6);big('第一章　完','食堂車への連結扉が解錠された');break;
+case'kettle':if(st===6){note('ティーポットは氷の塊だ。蒸気で解かすしかない。');adv(7)}else if(st>=8)note('解けた湯が、座席の方へ細く流れている。');else note('凍ったティーポット。');break;
+case'steamD':if(st===7){note('蒸気の脈動が食堂車を満たし、氷が解けていく…');O.plate.a=1;adv(8)}else note('弁は温かい。');break;
+case'plate':o.a=0;give('座席札13');doc('座席札13',LORE[1]+'\n\n十三人分の食器。その一席だけ、名前がない。');adv(9);big('第二章　完','寝台車への連結扉が解錠された');setTimeout(()=>note('Yボタンで表と裏の世界を行き来できる'),4500);break;
+case'bell':if(st===9&&world==='n'){note('鈴の音が、少し遅れて返ってきた。「裏世界」ボタンで裏側へ。',5000);adv(10)}
+ else if(st===10&&world==='w'){note('裏側では鈴が鳴らない。代わりに、誰かが息を吸う音がした。');adv(11)}
+ else if(st===10)note('もう一度、裏世界で鳴らしてみよう。');else note('寝台呼び鈴。');break;
+case'smir':if(st===11&&world==='w'){note('鏡には、あなたの後ろに十三人目が立っている。');O.tag.a=1;adv(12)}else note(world==='w'?'鏡は何も映さない。':'鏡は曇っている。');break;
+case'tag':o.a=0;give('私物札');doc('名前の消えた私物札',LORE[2]+'\n\n十三台目の寝台には、あなたの私物が残されていた。');adv(13);big('第三章　完','展望車への連結扉が解錠された');break;
+case'cons':if(st===13){note('車窓に、存在しない駅の灯りが並ぶ。4回目の観測で、灯りが目を開いた。',5000);adv(14)}else note('観測器の針が震えている。');break;
+case'route':if(st===14&&world==='w'){note('路線図の終点だけ、凍らずに残っている。');O.stat.a=1;adv(15)}else if(st===14)note('凍結していて読めない。裏世界なら…');else note('路線表示板は凍結している。');break;
+case'stat':o.a=0;give('零下駅の標示片');doc('零下駅の標示片',LORE[3]+'\n\n存在しない駅名が、無番号車両への扉を開いた。');adv(16);big('第四章　完','無番号車両への連結扉が解錠された');break;
+case'reg':if(st===16&&world==='w'){doc('乗客名簿',LORE[4]+'\n\nあなたは自分の名札を、名簿の十三番目に戻した。\n少年の荷札は、ゆっくりと温かくなっていく。\n\n――終点は、ない。',1);adv(17)}else note('名簿は凍りついている。');break}}
+function toggle(){if(paused)return;if(st<9){note('何も起きない。');return}const w=world==='n'?'w':'n';if(hit2(w)){note('壁の中へは入れない…');return}world=w;flash=1;snd('shift')}
+const hit2=w=>solid(px-.2,py-.2,w)||solid(px+.2,py-.2,w)||solid(px-.2,py+.2,w)||solid(px+.2,py+.2,w);
+// ---------- 描画 ----------
+function init(){const w=innerWidth,h=innerHeight;RW=w>h?400:280;RH=clamp(Math.round(RW*h/w),160,300);cv.width=RW;cv.height=RH;img=cx.createImageData(RW,RH);for(let i=3;i<img.data.length;i+=4)img.data[i]=255;
+proj=RW/2/Math.tan(FOV/2);zb=new Float32Array(RW);OFF=[];CS=[];IC=[];for(let x=0;x<RW;x++){const o=Math.atan((x+.5-RW/2)/proj);OFF.push(o);CS.push(Math.cos(o));IC.push(1/Math.cos(o))}}
+function render(t){const W=RW,H=RH,D=img.data,half=((H>>1)+bob)|0,T=TX[world],sa=Math.sin(ang),ca=Math.cos(ang);
+const fl=Math.max(.15,.93+.07*Math.sin(t*37)*Math.sin(t*11.3)-drop*.65);
+const lamp=(x,y,s)=>{const lx=Math.round((x-1.75)/3.5)*3.5+1.75,a=x-lx,b=(y-6.5)*s;return .3+1.4/(1+.35*(a*a+b*b))};
+for(let x=0;x<W;x++){DX[x]=Math.cos(ang+OFF[x]);DY[x]=Math.sin(ang+OFF[x])}
+for(let y=0;y<H;y++){if(y===half)continue;const f=y>half,rd=.5*proj/Math.abs(y-half);
+ for(let x=0;x<W;x++){const k=rd*IC[x],wx=px+DX[x]*k,wy=py+DY[x]*k,tx=f?(Math.abs(wy-6.5)<.7?T.K:T.F):T.C,
+  ti=((((wy*64)&63)*64)+((wx*64)&63))*4,L=(lamp(wx,wy,f?1.6:1)+.35/(1+rd*.35))*fl/(1+rd*.04),i=(y*W+x)*4,gr=(Math.random()-.5)*12;
+  D[i]=tx[ti]*L+gr;D[i+1]=tx[ti+1]*L+gr;D[i+2]=tx[ti+2]*L+gr}}
+const grid=grids[world];
+for(let x=0;x<W;x++){const rx=DX[x],ry=DY[x];let mx=px|0,my=py|0;const ddx=Math.abs(1/rx),ddy=Math.abs(1/ry),sx=rx<0?-1:1,sy=ry<0?-1:1;
+ let sdx=(rx<0?px-mx:mx+1-px)*ddx,sdy=(ry<0?py-my:my+1-py)*ddy,side=0,tt=0,ch='1',u=0;
+ for(let n=0;n<64;n++){if(sdx<sdy){tt=sdx;sdx+=ddx;mx+=sx;side=0}else{tt=sdy;sdy+=ddy;my+=sy;side=1}
+  ch=(grid[my]||'')[mx]||'1';if(ch==='.')continue;let wu=side?px+rx*tt:py+ry*tt;wu-=Math.floor(wu);
+  if(ch==='D'){const d=doors[mx+','+my];if(d&&(d.p>.985||wu<d.p))continue;wu-=d?d.p:0}u=wu;break}
+ const pp=tt*CS[x];zb[x]=pp;const lh=proj/pp,top=half-lh/2,y0=Math.max(0,top|0),y1=Math.min(H-1,(top+lh)|0),tx=T[ch],
+  uu=(((side?(ry<0?u:1-u):(rx>0?u:1-u))*64)&63),hx=px+rx*tt,hy=py+ry*tt,L=(lamp(hx,hy,.5)+.4/(1+pp*.4))*fl*(side?.82:1)/(1+pp*.04);
+ for(let y=y0;y<=y1;y++){const v=(((y-top)/lh*64)&63),ti=(v*64+uu)*4,i=(y*W+x)*4,gr=(Math.random()-.5)*12;
+  D[i]=tx[ti]*L+gr;D[i+1]=tx[ti+1]*L+gr;D[i+2]=tx[ti+2]*L+gr}}
+// スプライト
+target=null;let best=9;
+const sp=[];for(const o of OBJ){if(!o.a||(o.w!=='b'&&o.w!==world))continue;const rx=o.x-px,ry=o.y-py,dp=rx*ca+ry*sa;if(dp<.25||dp>16)continue;const lat=-rx*sa+ry*ca;sp.push({o,dp,lat});
+ if(o.i&&dp<2.3&&dp<best&&Math.abs(lat)/dp<.32&&zb[W>>1]>dp*.9){best=dp;target=o}}
+sp.sort((a,b)=>b.dp-a.dp);
+for(const s of sp){const o=s.o;const tx=SP[o.k]||(SP[o.k]=mk(o.k)),kk=K[o.k],size=proj/s.dp*kk[0],bot=half+proj/s.dp*(.5-kk[1]),sx=W/2+s.lat/s.dp*proj,x0=sx-size/2,y0=bot-size,
+ L=(lamp(o.x,o.y,.8)+.4/(1+s.dp*.4))*fl/(1+s.dp*.05),hi=o===target?42:0;
+ for(let xx=Math.max(0,x0|0);xx<Math.min(W,x0+size);xx++){if(zb[xx]<s.dp)continue;const u=((xx-x0)/size*64)|0;
+  for(let yy=Math.max(0,y0|0);yy<Math.min(H,bot);yy++){const v=((yy-y0)/size*64)|0,ti=(v*64+u)*4;if(tx[ti+3]<60)continue;const i=(yy*W+xx)*4,wr=world==='w'?.78:1;
+   D[i]=tx[ti]*L+hi;D[i+1]=tx[ti+1]*L*wr+hi;D[i+2]=tx[ti+2]*L*wr+hi}}}
+cx.putImageData(img,0,0)}
+// ---------- 更新 ----------
+function update(dt,t){
+ let mvx=jx,mvy=jy;if(keys.w||keys.arrowup)mvy-=1;if(keys.s||keys.arrowdown)mvy+=1;if(keys.a)mvx-=1;if(keys.d)mvx+=1;
+ if(keys.arrowleft)ang-=1.8*dt;if(keys.arrowright)ang+=1.8*dt;
+ const m=Math.hypot(mvx,mvy);if(m>1){mvx/=m;mvy/=m}
+ const sp=2.3,vx=(Math.cos(ang)*-mvy-Math.sin(ang)*mvx)*sp*dt,vy=(Math.sin(ang)*-mvy+Math.cos(ang)*mvx)*sp*dt;
+ if(!hit(px+vx,py))px+=vx;if(!hit(px,py+vy))py+=vy;
+ const mv=Math.hypot(mvx,mvy);if(mv>.1){bt+=dt*9;bob=Math.sin(bt)*2.2*mv;stepT-=dt;if(stepT<=0){snd('step');stepT=.5}}else bob*=.85;
+ for(const k in doors){const d=doors[k],[a,b]=k.split(',').map(Number),dist=Math.hypot(px-a-.5,py-b-.5),want=!d.lock&&dist<1.9?1:0;
+  d.p=clamp(d.p+Math.sign(want-d.p)*dt*1.2,0,1);if(d.lock&&dist<1.6&&t-lockT>3&&grids[world][b][a]==='D'){lockT=t;note('連結扉は施錠されている。')}}
+ const car=CARS.find(c=>px>=c[0]&&px<=c[1])||CARS[5],tg=6+car[3]-(world==='w'?6:0);temp+=(tg-temp)*dt*.08;
+ drop=Math.max(0,drop-dt*3);if(Math.random()<(world==='w'?.012:.003))drop=1;flash=Math.max(0,flash-dt*1.2);
+ $('flash').style.opacity=flash;$('frost').style.opacity=clamp((5-temp)/12,0,.85);
+ $('hud').innerHTML='<b>'+(world==='w'?'裏世界':'')+' '+car[2]+'</b>　気温 '+temp.toFixed(0)+'℃<br>目的：'+MIS[st];
+ const p=$('prompt');if(target&&!paused){p.textContent='調べる：'+target.l;p.style.opacity=1}else p.style.opacity=0}
+function loop(ms){const t=ms/1000,dt=Math.min(.05,t-last);last=t;if(!paused)update(dt,t);render(t);requestAnimationFrame(loop)}
+// ---------- 入力 ----------
+const ptr={};
+function stick(x,y,v){const r=$('ring'),k=$('knob');r.style.display=k.style.display=v?'block':'none';if(v){r.style.left=x+'px';r.style.top=y+'px';k.style.left=x+'px';k.style.top=y+'px'}}
+document.addEventListener('pointerdown',e=>{if(!started||paused||e.target.closest('.btn'))return;
+ if(e.pointerType==='mouse'){cv.requestPointerLock&&cv.requestPointerLock();return}
+ const s=e.clientX<innerWidth*.45;ptr[e.pointerId]={x:e.clientX,y:e.clientY,ox:e.clientX,oy:e.clientY,s};if(s)stick(e.clientX,e.clientY,1)});
+document.addEventListener('pointermove',e=>{if(e.pointerType==='mouse'){if(document.pointerLockElement&&!paused)ang+=e.movementX*.0025;return}
+ const p=ptr[e.pointerId];if(!p)return;
+ if(p.s){let vx=e.clientX-p.ox,vy=e.clientY-p.oy;const m=Math.hypot(vx,vy),R=55;if(m>R){vx*=R/m;vy*=R/m}jx=vx/R;jy=vy/R;const k=$('knob');k.style.left=p.ox+vx+'px';k.style.top=p.oy+vy+'px'}
+ else{ang+=(e.clientX-p.x)*.0055;p.x=e.clientX;p.y=e.clientY}});
+const up=e=>{const p=ptr[e.pointerId];if(p&&p.s){jx=jy=0;stick(0,0,0)}delete ptr[e.pointerId]};
+document.addEventListener('pointerup',up);document.addEventListener('pointercancel',up);
+$('bAct').addEventListener('pointerdown',e=>{e.preventDefault();act()});
+$('bWorld').addEventListener('pointerdown',e=>{e.preventDefault();toggle()});
+addEventListener('keydown',e=>{const k=e.key.toLowerCase();keys[k]=1;if(k==='e'||k===' '||k==='enter')act();if(k==='y')toggle()});
+addEventListener('keyup',e=>keys[e.key.toLowerCase()]=0);
+addEventListener('resize',init);
+document.addEventListener('contextmenu',e=>e.preventDefault());
+$('start').addEventListener('click',()=>{if(ended){location.reload();return}
+ $('title').style.display='none';started=true;paused=false;init();audio();
+ try{document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen();screen.orientation&&screen.orientation.lock&&screen.orientation.lock('landscape').catch(()=>{})}catch(e){}
+ unlock();note('左側をドラッグで移動、右側をドラッグで視点。荷物車の少年を探そう。',5200);requestAnimationFrame(loop)});
+init();
+</script></body></html>
