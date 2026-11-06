@@ -1,0 +1,576 @@
+  <!-- FontAwesome icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Touch action control for mobile playability */
+        body, html {
+            touch-action: manipulation;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+            overflow: hidden;
+            background-color: #0f172a;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+
+        /* Neon Glow Effects */
+        .neon-text-blue {
+            text-shadow: 0 0 10px rgba(56, 189, 248, 0.8), 0 0 20px rgba(56, 189, 248, 0.4);
+        }
+        .neon-text-pink {
+            text-shadow: 0 0 10px rgba(244, 63, 94, 0.8), 0 0 20px rgba(244, 63, 94, 0.4);
+        }
+        .neon-box {
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.5), inset 0 0 15px rgba(56, 189, 248, 0.2);
+        }
+
+        /* Virtual Control Buttons Custom Press Effect */
+        .touch-btn {
+            transition: transform 0.05s ease, background-color 0.05s ease;
+        }
+        .touch-btn:active, .touch-btn.active {
+            transform: scale(0.92);
+            background-color: rgba(56, 189, 248, 0.4);
+        }
+    </style>
+</head>
+<body class="w-screen h-screen flex flex-col justify-between items-center text-white relative select-none">
+
+    <!-- Header UI -->
+    <header class="w-full max-w-4xl px-4 py-2 flex justify-between items-center z-10 bg-slate-900/80 backdrop-blur border-b border-slate-700">
+        <div class="flex items-center space-x-2">
+            <i class="fa-solid font-bold text-cyan-400 text-xl fa-bolt"></i>
+            <span class="font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-pink-500 text-lg sm:text-xl">CYBER DASH</span>
+        </div>
+        
+        <div class="flex items-center space-x-4 text-sm sm:text-base font-bold">
+            <div class="text-slate-400">SCORE: <span id="scoreText" class="text-white">0</span></div>
+            <div class="text-yellow-400">HIGH: <span id="highScoreText" class="text-yellow-300">0</span></div>
+            <button id="soundToggle" class="p-2 rounded-full hover:bg-slate-800 text-slate-300">
+                <i class="fa-solid fa-volume-high text-lg" id="soundIcon"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Game Canvas Container -->
+    <main class="relative flex-1 w-full max-w-4xl flex items-center justify-center p-2 sm:p-4 overflow-hidden">
+        <canvas id="gameCanvas" class="w-full h-full max-h-[75vh] object-contain rounded-xl border-2 border-cyan-500/40 bg-slate-950 neon-box"></canvas>
+
+        <!-- Start Overlay -->
+        <div id="startScreen" class="absolute inset-0 bg-slate-950/90 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center z-20">
+            <h1 class="text-4xl sm:text-6xl font-black mb-2 text-cyan-400 tracking-wider neon-text-blue">NEON DASH</h1>
+            <p class="text-slate-300 text-sm sm:text-base max-w-md mb-6">
+                障害物を避けてエネルギーコアを集めよう！<br>
+                <span class="text-xs text-slate-400">PC: [▲][▼] または [W][S] / スマホ: 画面スワイプ or ボタン操作</span>
+            </p>
+            <button id="startBtn" class="px-8 py-4 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-full font-bold text-lg shadow-lg hover:from-cyan-400 hover:to-blue-500 transform hover:scale-105 active:scale-95 transition-all text-white border border-cyan-300">
+                <i class="fa-solid fa-play mr-2"></i> スタート
+            </button>
+        </div>
+
+        <!-- Game Over Overlay -->
+        <div id="gameOverScreen" class="hidden absolute inset-0 bg-slate-950/90 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center z-20">
+            <h2 class="text-3xl sm:text-5xl font-extrabold text-pink-500 mb-2 neon-text-pink">GAME OVER</h2>
+            <div class="bg-slate-900/80 border border-slate-700 rounded-xl p-4 mb-6 w-64">
+                <p class="text-slate-400 text-sm mb-1">SCORE</p>
+                <p id="finalScore" class="text-3xl font-bold text-white mb-3">0</p>
+                <p class="text-slate-400 text-xs mb-1">BEST SCORE</p>
+                <p id="finalHighScore" class="text-xl font-bold text-yellow-400">0</p>
+            </div>
+            <button id="restartBtn" class="px-8 py-3 bg-gradient-to-r from-pink-500 to-rose-600 rounded-full font-bold text-lg shadow-lg hover:from-pink-400 hover:to-rose-500 transform hover:scale-105 active:scale-95 transition-all text-white border border-pink-300">
+                <i class="fa-solid fa-rotate-right mr-2"></i> もう一度遊ぶ
+            </button>
+        </div>
+    </main>
+
+    <!-- Mobile Virtual Controls (Shown on mobile devices or smaller screens) -->
+    <footer class="w-full max-w-4xl p-3 flex justify-between items-center z-10 sm:hidden bg-slate-900/90 border-t border-slate-800">
+        <div class="flex space-x-4 w-full justify-around">
+            <button id="btnUp" class="touch-btn w-24 h-14 bg-slate-800/80 border-2 border-cyan-500/50 rounded-xl flex items-center justify-center active:bg-cyan-500/40 text-cyan-400 text-2xl">
+                <i class="fa-solid fa-chevron-up"></i>
+            </button>
+            <button id="btnDash" class="touch-btn w-24 h-14 bg-pink-900/40 border-2 border-pink-500/50 rounded-xl flex items-center justify-center active:bg-pink-500/40 text-pink-400 text-lg font-bold">
+                DASH
+            </button>
+            <button id="btnDown" class="touch-btn w-24 h-14 bg-slate-800/80 border-2 border-cyan-500/50 rounded-xl flex items-center justify-center active:bg-cyan-500/40 text-cyan-400 text-2xl">
+                <i class="fa-solid fa-chevron-down"></i>
+            </button>
+        </div>
+    </footer>
+
+    <!-- Web Audio API Sound Effects Manager -->
+    <script>
+        class SoundManager {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioCtx();
+                }
+            }
+
+            playCollect() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(587.33, this.ctx.currentTime); // D5
+                osc.frequency.exponentialRampToValueAtTime(880, this.ctx.currentTime + 0.15); // A5
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.15);
+            }
+
+            playDash() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(200, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(600, this.ctx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.1);
+            }
+
+            playHit() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(40, this.ctx.currentTime + 0.3);
+                gain.gain.setValueAtTime(0.4, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.3);
+            }
+        }
+
+        const sound = new SoundManager();
+    </script>
+
+    <!-- Main Game Logic -->
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // UI elements
+        const startScreen = document.getElementById('startScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const startBtn = document.getElementById('startBtn');
+        const restartBtn = document.getElementById('restartBtn');
+        const scoreText = document.getElementById('scoreText');
+        const highScoreText = document.getElementById('highScoreText');
+        const finalScore = document.getElementById('finalScore');
+        const finalHighScore = document.getElementById('finalHighScore');
+        const soundToggle = document.getElementById('soundToggle');
+        const soundIcon = document.getElementById('soundIcon');
+
+        // Game State Variables
+        let isRunning = false;
+        let score = 0;
+        let highScore = localStorage.getItem('cyber_dash_high') || 0;
+        highScoreText.textContent = highScore;
+
+        // Logical game height/width for uniform scaling
+        const GAME_WIDTH = 800;
+        const GAME_HEIGHT = 450;
+
+        // Player configuration
+        const player = {
+            x: 100,
+            y: GAME_HEIGHT / 2,
+            radius: 16,
+            targetY: GAME_HEIGHT / 2,
+            speed: 8,
+            dashSpeed: 16,
+            isDashing: false,
+            dashCooldown: 0,
+            color: '#00f3ff',
+            trail: []
+        };
+
+        // Game Arrays
+        let obstacles = [];
+        let items = [];
+        let particles = [];
+        let stars = [];
+
+        let spawnTimer = 0;
+        let itemTimer = 0;
+        let gameSpeed = 5;
+
+        // Key Controls State
+        const keys = { Up: false, Down: false, Dash: false };
+
+        // Handle Responsive Canvas Resize
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            const rect = container.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Coordinate scaling converter (Logical to Canvas)
+        function toCanvasX(x) { return (x / GAME_WIDTH) * canvas.width; }
+        function toCanvasY(y) { return (y / GAME_HEIGHT) * canvas.height; }
+        function toCanvasSize(val) { return (val / GAME_WIDTH) * canvas.width; }
+
+        // Background Starfield Generation
+        function initStars() {
+            stars = [];
+            for (let i = 0; i < 60; i++) {
+                stars.push({
+                    x: Math.random() * GAME_WIDTH,
+                    y: Math.random() * GAME_HEIGHT,
+                    size: Math.random() * 2 + 0.5,
+                    speed: Math.random() * 2 + 0.5
+                });
+            }
+        }
+
+        // Particle Burst Effect
+        function createParticles(x, y, color, count = 10) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: (Math.random() - 0.5) * 8,
+                    radius: Math.random() * 4 + 2,
+                    color: color,
+                    alpha: 1,
+                    life: 1
+                });
+            }
+        }
+
+        // Event Listeners (Keyboard)
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'ArrowUp' || e.code === 'KeyW') keys.Up = true;
+            if (e.code === 'ArrowDown' || e.code === 'KeyS') keys.Down = true;
+            if (e.code === 'Space' || e.code === 'ShiftLeft') triggerDash();
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'ArrowUp' || e.code === 'KeyW') keys.Up = false;
+            if (e.code === 'ArrowDown' || e.code === 'KeyS') keys.Down = false;
+        });
+
+        // Touch Control handling for Mobile
+        let touchStartY = 0;
+        canvas.addEventListener('touchstart', (e) => {
+            touchStartY = e.touches[0].clientY;
+        }, { passive: true });
+
+        canvas.addEventListener('touchmove', (e) => {
+            if (!isRunning) return;
+            const currentY = e.touches[0].clientY;
+            const diffY = currentY - touchStartY;
+            
+            if (Math.abs(diffY) > 10) {
+                if (diffY < 0) { keys.Up = true; keys.Down = false; }
+                else { keys.Down = true; keys.Up = false; }
+            }
+        }, { passive: true });
+
+        canvas.addEventListener('touchend', () => {
+            keys.Up = false;
+            keys.Down = false;
+        });
+
+        // Mobile On-screen Buttons logic
+        const btnUp = document.getElementById('btnUp');
+        const btnDown = document.getElementById('btnDown');
+        const btnDash = document.getElementById('btnDash');
+
+        const bindTouchBtn = (element, keyName) => {
+            element.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                keys[keyName] = true;
+                element.classList.add('active');
+            });
+            element.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                keys[keyName] = false;
+                element.classList.remove('active');
+            });
+            element.addEventListener('mousedown', () => { keys[keyName] = true; });
+            element.addEventListener('mouseup', () => { keys[keyName] = false; });
+        };
+
+        bindTouchBtn(btnUp, 'Up');
+        bindTouchBtn(btnDown, 'Down');
+        btnDash.addEventListener('click', triggerDash);
+        btnDash.addEventListener('touchstart', (e) => { e.preventDefault(); triggerDash(); });
+
+        function triggerDash() {
+            if (!isRunning || player.dashCooldown > 0) return;
+            player.isDashing = true;
+            player.dashCooldown = 90; // Frames delay
+            sound.playDash();
+            createParticles(player.x, player.y, '#ff007f', 15);
+            setTimeout(() => { player.isDashing = false; }, 200);
+        }
+
+        // Sound Toggle
+        soundToggle.addEventListener('click', () => {
+            sound.muted = !sound.muted;
+            soundIcon.className = sound.muted ? 'fa-solid fa-volume-xmark text-lg text-rose-400' : 'fa-solid fa-volume-high text-lg text-slate-300';
+        });
+
+        // Start & Restart Trigger
+        startBtn.addEventListener('click', startGame);
+        restartBtn.addEventListener('click', startGame);
+
+        function startGame() {
+            sound.init();
+            score = 0;
+            gameSpeed = 5;
+            spawnTimer = 0;
+            itemTimer = 0;
+            obstacles = [];
+            items = [];
+            particles = [];
+            
+            player.y = GAME_HEIGHT / 2;
+            player.dashCooldown = 0;
+            player.isDashing = false;
+            player.trail = [];
+
+            initStars();
+
+            scoreText.textContent = '0';
+            startScreen.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+            isRunning = true;
+        }
+
+        function gameOver() {
+            isRunning = false;
+            sound.playHit();
+            createParticles(player.x, player.y, '#ff0055', 30);
+
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('cyber_dash_high', highScore);
+                highScoreText.textContent = highScore;
+            }
+
+            finalScore.textContent = score;
+            finalHighScore.textContent = highScore;
+            gameOverScreen.classList.remove('hidden');
+        }
+
+        // Spawning Elements
+        function spawnObstacle() {
+            const h = Math.random() * 80 + 40;
+            const isTop = Math.random() > 0.5;
+            obstacles.push({
+                x: GAME_WIDTH + 50,
+                y: isTop ? 0 : GAME_HEIGHT - h,
+                width: 30,
+                height: h,
+                color: '#ff0055'
+            });
+        }
+
+        function spawnItem() {
+            items.push({
+                x: GAME_WIDTH + 30,
+                y: Math.random() * (GAME_HEIGHT - 80) + 40,
+                radius: 10,
+                color: '#ffe600'
+            });
+        }
+
+        // Game Update Loop
+        function update() {
+            if (!isRunning) return;
+
+            // Speed progression
+            gameSpeed += 0.001;
+
+            // Player movement
+            const moveSpeed = player.isDashing ? player.dashSpeed : player.speed;
+            if (keys.Up && player.y - player.radius > 0) player.y -= moveSpeed;
+            if (keys.Down && player.y + player.radius < GAME_HEIGHT) player.y += moveSpeed;
+
+            // Dash Cooldown frame reduction
+            if (player.dashCooldown > 0) player.dashCooldown--;
+
+            // Player Trail
+            player.trail.push({ x: player.x, y: player.y });
+            if (player.trail.length > (player.isDashing ? 12 : 6)) player.trail.shift();
+
+            // Stars Background Update
+            stars.forEach(star => {
+                star.x -= star.speed * (gameSpeed / 4);
+                if (star.x < 0) star.x = GAME_WIDTH;
+            });
+
+            // Spawning Logic
+            spawnTimer++;
+            if (spawnTimer > Math.max(30, 90 - Math.floor(gameSpeed * 4))) {
+                spawnObstacle();
+                spawnTimer = 0;
+            }
+
+            itemTimer++;
+            if (itemTimer > 120) {
+                spawnItem();
+                itemTimer = 0;
+            }
+
+            // Obstacles Update & Collision Check
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                const obs = obstacles[i];
+                obs.x -= gameSpeed;
+
+                // AABB to Circle collision detection
+                const closestX = Math.max(obs.x, Math.min(player.x, obs.x + obs.width));
+                const closestY = Math.max(obs.y, Math.min(player.y, obs.y + obs.height));
+                const distX = player.x - closestX;
+                const distY = player.y - closestY;
+                const distance = Math.sqrt((distX * distX) + (distY * distY));
+
+                if (distance < player.radius - 2) {
+                    if (!player.isDashing) {
+                        gameOver();
+                        return;
+                    } else {
+                        // Destroy obstacle on dash
+                        sound.playCollect();
+                        createParticles(obs.x, obs.y, '#ff0055', 15);
+                        obstacles.splice(i, 1);
+                        score += 50;
+                        scoreText.textContent = score;
+                        continue;
+                    }
+                }
+
+                if (obs.x + obs.width < 0) obstacles.splice(i, 1);
+            }
+
+            // Collectible Items Update
+            for (let i = items.length - 1; i >= 0; i--) {
+                const item = items[i];
+                item.x -= gameSpeed;
+
+                const dx = player.x - item.x;
+                const dy = player.y - item.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < player.radius + item.radius) {
+                    sound.playCollect();
+                    createParticles(item.x, item.y, '#ffe600', 12);
+                    items.splice(i, 1);
+                    score += 100;
+                    scoreText.textContent = score;
+                    continue;
+                }
+
+                if (item.x < 0) items.splice(i, 1);
+            }
+
+            // Particles Update
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= 0.03;
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+
+            // Increment Score passively over time
+            score++;
+            scoreText.textContent = score;
+        }
+
+        // Draw Loop
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Stars Background
+            stars.forEach(star => {
+                ctx.fillStyle = '#ffffff88';
+                ctx.fillRect(toCanvasX(star.x), toCanvasY(star.y), toCanvasSize(star.size), toCanvasSize(star.size));
+            });
+
+            if (isRunning || particles.length > 0) {
+                // Draw Player Trail
+                player.trail.forEach((t, idx) => {
+                    ctx.beginPath();
+                    ctx.arc(toCanvasX(t.x), toCanvasY(t.y), toCanvasSize(player.radius * (idx / player.trail.length)), 0, Math.PI * 2);
+                    ctx.fillStyle = player.isDashing ? `rgba(255, 0, 127, ${idx / player.trail.length})` : `rgba(0, 243, 255, ${idx / player.trail.length * 0.5})`;
+                    ctx.fill();
+                });
+
+                // Draw Player Core
+                ctx.beginPath();
+                ctx.arc(toCanvasX(player.x), toCanvasY(player.y), toCanvasSize(player.radius), 0, Math.PI * 2);
+                ctx.fillStyle = player.isDashing ? '#ff007f' : player.color;
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = player.isDashing ? '#ff007f' : '#00f3ff';
+                ctx.fill();
+                ctx.shadowBlur = 0; // Reset Shadow
+
+                // Draw Obstacles
+                obstacles.forEach(obs => {
+                    ctx.fillStyle = obs.color;
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = obs.color;
+                    ctx.fillRect(toCanvasX(obs.x), toCanvasY(obs.y), toCanvasSize(obs.width), toCanvasY(obs.height));
+                    ctx.shadowBlur = 0;
+                });
+
+                // Draw Collectible Items
+                items.forEach(item => {
+                    ctx.beginPath();
+                    ctx.arc(toCanvasX(item.x), toCanvasY(item.y), toCanvasSize(item.radius), 0, Math.PI * 2);
+                    ctx.fillStyle = item.color;
+                    ctx.shadowBlur = 12;
+                    ctx.shadowColor = item.color;
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                });
+
+                // Draw Particles
+                particles.forEach(p => {
+                    ctx.beginPath();
+                    ctx.arc(toCanvasX(p.x), toCanvasY(p.y), toCanvasSize(p.radius * p.life), 0, Math.PI * 2);
+                    ctx.fillStyle = p.color;
+                    ctx.globalAlpha = p.life;
+                    ctx.fill();
+                    ctx.globalAlpha = 1.0;
+                });
+            }
+        }
+
+        // Main Animation Loop
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        window.onload = () => {
+            gameLoop();
+        };
+    </script>
+</body>
+</html>
