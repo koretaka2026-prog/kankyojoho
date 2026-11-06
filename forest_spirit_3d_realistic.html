@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>フォレスト・スピリット 3D</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap');
+
+        * {
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #1a2e1a;
+            font-family: 'Zen Maru Gothic', sans-serif;
+            color: #ffffff;
+        }
+
+        .forest-panel {
+            background: rgba(20, 38, 25, 0.82);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 2px solid rgba(134, 239, 172, 0.4);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .forest-btn {
+            background: linear-gradient(135deg, rgba(74, 222, 128, 0.3), rgba(22, 101, 52, 0.6));
+            border: 2px solid #86efac;
+            color: #ffffff;
+            font-weight: 700;
+            transition: all 0.2s ease;
+        }
+
+        .forest-btn:hover, .forest-btn:active {
+            background: #86efac;
+            color: #14532d;
+            box-shadow: 0 0 20px rgba(134, 239, 172, 0.6);
+        }
+
+        /* ミニマップ用スタイル（画面左下常設型） */
+        #minimap-container {
+            background: rgba(20, 38, 25, 0.85);
+            backdrop-filter: blur(8px);
+            border: 2px solid rgba(134, 239, 172, 0.6);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+        }
+
+        #minimap-canvas {
+            background: #102015;
+            border: 1.5px solid #86efac;
+            border-radius: 50%;
+        }
+
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+<body class="relative w-screen h-screen overflow-hidden">
+
+    <!-- 3D Canvas -->
+    <div id="canvas-container" class="absolute inset-0 z-0"></div>
+
+    <!-- ================= UI OVERLAY ================= -->
+    <div id="ui-container" class="absolute inset-0 z-20 pointer-events-none flex flex-col justify-between p-4 sm:p-6">
+        
+        <!-- Header Info Bar -->
+        <div class="flex justify-between items-start w-full gap-2">
+            <!-- Title & Mission Info -->
+            <div class="forest-panel p-3 sm:p-4 rounded-2xl pointer-events-auto flex items-center gap-3">
+                <i class="fa-solid fa-tree text-2xl sm:text-3xl text-green-400"></i>
+                <div>
+                    <div class="font-bold text-base sm:text-lg text-emerald-200 tracking-wide">
+                        フォレスト・スピリット
+                    </div>
+                    <div class="text-xs text-emerald-100/80">集めた光のしずく: <span id="orb-count" class="text-amber-300 font-bold text-sm">0</span> / <span id="orb-total">8</span></div>
+                </div>
+            </div>
+
+            <!-- Goal Indicator & Map Toggle Button -->
+            <div class="flex items-center gap-3 pointer-events-auto">
+                <div id="goal-panel" class="forest-panel p-3 rounded-2xl hidden sm:flex items-center gap-2">
+                    <i class="fa-solid fa-sun text-amber-300 animate-pulse text-lg"></i>
+                    <div class="text-xs font-bold text-amber-100">
+                        <span id="goal-text">森の光を集めよう</span>
+                    </div>
+                </div>
+
+                <!-- Map Toggle Button -->
+                <button id="btn-map-toggle" class="forest-panel px-3 py-2 rounded-2xl flex items-center gap-2 text-xs font-bold text-emerald-200 hover:text-white transition-all pointer-events-auto active:scale-95">
+                    <i class="fa-solid fa-map text-amber-300 text-sm"></i>
+                    <span>MAP <span class="hidden sm:inline text-[10px] text-emerald-300">(M)</span></span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Center Toast Notification -->
+        <div id="msg-toast" class="self-center forest-panel px-5 py-2.5 rounded-full text-xs sm:text-sm font-bold text-emerald-200 opacity-0 transition-opacity duration-300 pointer-events-none border-emerald-400">
+            光のしずくをみつけた！
+        </div>
+
+        <!-- Bottom Controls & Instructions -->
+        <div class="flex flex-col items-center gap-3 w-full">
+            <!-- Mobile Touch D-Pad / Controls -->
+            <div class="flex justify-between items-end w-full max-w-md pointer-events-auto sm:hidden px-2">
+                <!-- Virtual Joystick Touch Area Indicator -->
+                <div class="forest-panel p-3 rounded-2xl text-[10px] text-emerald-200/80 text-center w-full">
+                    <i class="fa-solid fa-hand-pointer mr-1"></i> 画面スワイプ: 移動 & 視点操作
+                </div>
+                <button id="btn-jump-mobile" class="forest-btn p-4 rounded-2xl ml-2 flex items-center justify-center text-lg active:scale-95 shadow-lg">
+                    <i class="fa-solid fa-angles-up"></i>
+                </button>
+            </div>
+
+            <!-- Desktop Keyboard Instructions -->
+            <div class="forest-panel hidden sm:flex px-6 py-2.5 rounded-2xl text-xs text-emerald-100 gap-6 border-emerald-400/50">
+                <div><span class="text-emerald-300 font-bold">W A S D / 矢印</span> : 移動</div>
+                <div><span class="text-emerald-300 font-bold">SPACE</span> : ジャンプ</div>
+                <div><span class="text-emerald-300 font-bold">M</span> : マップ表示</div>
+                <div><span class="text-emerald-300 font-bold">クリック / マウス</span> : 視点操作</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Left Compact Minimap Overlay (初期非表示: hidden 追加) -->
+    <div id="minimap-container" class="absolute bottom-4 left-4 z-20 pointer-events-auto rounded-3xl p-3 flex flex-col items-center gap-1.5 shadow-2xl transition-all duration-300 hidden">
+        <!-- Legend Indicator -->
+        <div class="flex justify-center gap-2 text-[9px] font-bold text-emerald-200/90 w-full px-1">
+            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-400"></span>自分</span>
+            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-yellow-300"></span>しずく</span>
+            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-sky-400"></span>祭壇</span>
+        </div>
+        
+        <!-- Minimap Canvas -->
+        <canvas id="minimap-canvas" width="130" height="130" class="shadow-md"></canvas>
+    </div>
+
+    <!-- Start Overlay Modal -->
+    <div id="start-overlay" class="absolute inset-0 z-30 flex items-center justify-center p-4 bg-emerald-950/80 backdrop-blur-md">
+        <div class="forest-panel max-w-md w-full rounded-3xl p-6 sm:p-8 text-center border-emerald-400/60 shadow-2xl">
+            <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-emerald-500/20 flex items-center justify-center border border-emerald-300">
+                <i class="fa-solid fa-leaf text-3xl text-emerald-300"></i>
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-bold text-emerald-100 mb-2">
+                フォレスト・スピリット 3D
+            </h1>
+            <p class="text-xs sm:text-sm text-emerald-200/90 leading-relaxed mb-6">
+                あなたは森の小さな守護精霊です。<br>
+                緑豊かな森を探索し、失われた<span class="text-amber-300 font-bold">「8つの光のしずく」</span>をすべて集めて中央の古き祭壇へ届けてください。
+            </p>
+
+            <button id="btn-start" class="forest-btn w-full py-4 rounded-2xl font-bold text-sm sm:text-base tracking-wider shadow-lg">
+                <i class="fa-solid fa-play mr-2"></i> 森を探索する
+            </button>
+        </div>
+    </div>
+
+    <!-- Game Victory Modal -->
+    <div id="victory-overlay" class="absolute inset-0 z-30 hidden flex items-center justify-center p-4 bg-emerald-950/85 backdrop-blur-md">
+        <div class="forest-panel max-w-md w-full rounded-3xl p-8 text-center border-amber-300 shadow-2xl">
+            <i class="fa-solid fa-sun text-5xl text-amber-300 mb-4 animate-bounce"></i>
+            <h2 class="text-2xl font-bold text-amber-200 mb-2">森に光が戻りました！</h2>
+            <p class="text-xs sm:text-sm text-emerald-100 mb-6">
+                すべての光のしずくが集まり、森の平和が守られました。静かな森の旅を完了しました！
+            </p>
+            <button id="btn-restart" class="forest-btn w-full py-3.5 rounded-2xl font-bold text-sm">
+                <i class="fa-solid fa-rotate-right mr-2"></i> もう一度あそぶ
+            </button>
+        </div>
+    </div>
+
+    <!-- Game Engine -->
+    <script>
+        // ==========================================
+        // Sound Engine (Web Audio API - Natural FX)
+        // ==========================================
+        class SoundFX {
+            constructor() { this.ctx = null; }
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioCtx();
+                }
+            }
+            playCollect() {
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(523.25, now); // C5
+                osc.frequency.exponentialRampToValueAtTime(1046.50, now + 0.15); // C6
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(now); osc.stop(now + 0.3);
+            }
+            playJump() {
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(250, now);
+                osc.frequency.exponentialRampToValueAtTime(450, now + 0.1);
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(now); osc.stop(now + 0.1);
+            }
+            playWin() {
+                if (!this.ctx) return;
+                const notes = [440, 554.37, 659.25, 880];
+                notes.forEach((freq, i) => {
+                    const now = this.ctx.currentTime + i * 0.12;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.frequency.setValueAtTime(freq, now);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+                    osc.connect(gain); gain.connect(this.ctx.destination);
+                    osc.start(now); osc.stop(now + 0.4);
+                });
+            }
+        }
+        const sfx = new SoundFX();
+
+        // ==========================================
+        // World & Scene Variables
+        // ==========================================
+        let scene, camera, renderer;
+        let player, playerBody;
+        let orbs = [];
+        let altar;
+        let platforms = []; // 空中の足場
+        let pitHole = { x: 30, z: -20, radius: 4.5, depth: 5.5 }; // 地面の穴
+        let collectedCount = 0;
+        const TOTAL_ORBS = 8;
+
+        // Physics / Movement
+        const playerVel = new THREE.Vector3();
+        let isGrounded = true;
+        const moveState = { forward: false, backward: false, left: false, right: false };
+        
+        // Camera Controls
+        let cameraAngleX = 0;
+        let cameraAngleY = 0.3;
+        let isPointerLocked = false;
+        let isMapVisible = false; // 初期状態は非表示
+
+        // Mobile Controls
+        let touchLeftId = null, touchRightId = null;
+        let touchStartX = 0, touchStartY = 0;
+
+        // ==========================================
+        // World Initialization
+        // ==========================================
+        function init() {
+            const container = document.getElementById('canvas-container');
+
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x2a4731);
+            scene.fog = new THREE.FogExp2(0x2a4731, 0.015);
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 200);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
+
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0xd4f7d4, 0.7);
+            scene.add(ambientLight);
+
+            const sunLight = new THREE.DirectionalLight(0xfff5cc, 1.3);
+            sunLight.position.set(30, 50, 20);
+            sunLight.castShadow = true;
+            sunLight.shadow.mapSize.width = 2048;
+            sunLight.shadow.mapSize.height = 2048;
+            scene.add(sunLight);
+
+            // Terrain & Vegetation
+            buildTerrain();
+            buildForestProps();
+
+            // Player Creation (Spirit Creature)
+            createPlayer();
+
+            // Collectibles & Goal Altar
+            spawnAltar();
+            spawnOrbs();
+
+            // Event Listeners
+            initEvents();
+        }
+
+        // ==========================================
+        // Environment Builders
+        // ==========================================
+        function buildTerrain() {
+            // Main Grass Floor
+            const geo = new THREE.PlaneGeometry(160, 160, 32, 32);
+            const mat = new THREE.MeshStandardMaterial({
+                color: 0x3a633d,
+                roughness: 0.9,
+                metalness: 0.1
+            });
+            const ground = new THREE.Mesh(geo, mat);
+            ground.rotation.x = -Math.PI / 2;
+            ground.receiveShadow = true;
+            scene.add(ground);
+
+            // 地面の穴（洞窟の入り口風のリング＆深い穴の内部）を建設
+            buildPitHole();
+
+            // Surrounding Hills / Barrier
+            const hillGeo = new THREE.ConeGeometry(12, 16, 8);
+            const hillMat = new THREE.MeshStandardMaterial({ color: 0x213d25, roughness: 1.0 });
+            for (let i = 0; i < 30; i++) {
+                const angle = (i / 30) * Math.PI * 2;
+                const radius = 70 + Math.random() * 8;
+                const hill = new THREE.Mesh(hillGeo, hillMat);
+                hill.position.set(Math.cos(angle) * radius, 6, Math.sin(angle) * radius);
+                hill.scale.set(1 + Math.random(), 0.8 + Math.random() * 0.5, 1 + Math.random());
+                scene.add(hill);
+            }
+        }
+
+        function buildForestProps() {
+            // Trees
+            const trunkGeo = new THREE.CylinderGeometry(0.4, 0.7, 4, 6);
+            const trunkMat = new THREE.MeshStandardMaterial({ color: 0x4a2e18 });
+            const leavesGeo = new THREE.DodecahedronGeometry(2.5, 1);
+            const leavesMat = new THREE.MeshStandardMaterial({ color: 0x2e7d32, roughness: 0.8 });
+
+            for (let i = 0; i < 70; i++) {
+                const x = (Math.random() - 0.5) * 120;
+                const z = (Math.random() - 0.5) * 120;
+                if (Math.hypot(x, z) < 10) continue; // Keep altar center clear
+
+                const tree = new THREE.Group();
+                const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+                trunk.position.y = 2;
+                trunk.castShadow = true;
+                tree.add(trunk);
+
+                const leaves = new THREE.Mesh(leavesGeo, leavesMat);
+                leaves.position.y = 4.8;
+                leaves.castShadow = true;
+                tree.add(leaves);
+
+                tree.position.set(x, 0, z);
+                scene.add(tree);
+            }
+
+            // Flowers / Mushrooms
+            const flowerGeo = new THREE.SphereGeometry(0.2, 6, 6);
+            const flowerMat = new THREE.MeshStandardMaterial({ color: 0xfbcfe8, emissive: 0xf472b6, emissiveIntensity: 0.3 });
+            for (let i = 0; i < 80; i++) {
+                const flower = new THREE.Mesh(flowerGeo, flowerMat);
+                flower.position.set((Math.random() - 0.5) * 130, 0.2, (Math.random() - 0.5) * 130);
+                scene.add(flower);
+            }
+
+            // 空中の古代の足場（跳び移るためのプラットフォーム）
+            buildPlatforms();
+        }
+
+        function buildPitHole() {
+            // 穴のフチ（黒っぽい岩の縁取り）
+            const rimGeo = new THREE.RingGeometry(3.8, 5.0, 24);
+            const rimMat = new THREE.MeshStandardMaterial({ color: 0x27272a, side: THREE.DoubleSide });
+            const rim = new THREE.Mesh(rimGeo, rimMat);
+            rim.rotation.x = -Math.PI / 2;
+            rim.position.set(pitHole.x, 0.02, pitHole.z);
+            scene.add(rim);
+
+            // 穴の底（黒い底面）
+            const bottomGeo = new THREE.CircleGeometry(4.0, 24);
+            const bottomMat = new THREE.MeshStandardMaterial({ color: 0x18181b, roughness: 1.0 });
+            const bottom = new THREE.Mesh(bottomGeo, bottomMat);
+            bottom.rotation.x = -Math.PI / 2;
+            bottom.position.set(pitHole.x, -pitHole.depth, pitHole.z);
+            bottom.receiveShadow = true;
+            scene.add(bottom);
+
+            // 穴の内壁（円筒）
+            const wallGeo = new THREE.CylinderGeometry(4.0, 4.0, pitHole.depth, 24, 1, true);
+            const wallMat = new THREE.MeshStandardMaterial({ color: 0x27272a, side: THREE.BackSide, roughness: 0.9 });
+            const wall = new THREE.Mesh(wallGeo, wallMat);
+            wall.position.set(pitHole.x, -pitHole.depth / 2, pitHole.z);
+            scene.add(wall);
+        }
+
+        function buildPlatforms() {
+            const platGeo = new THREE.BoxGeometry(4, 0.6, 4);
+            const platMat = new THREE.MeshStandardMaterial({ color: 0x78716c, roughness: 0.8 });
+
+            // 1段階目の足場 (地上からの跳び乗り用)
+            const p1 = new THREE.Mesh(platGeo, platMat);
+            p1.position.set(-35, 3.5, -5);
+            p1.castShadow = true;
+            p1.receiveShadow = true;
+            scene.add(p1);
+            platforms.push({ x: -35, z: -5, y: 3.5, radius: 2.2 });
+
+            // 2段階目の足場 (中継地点)
+            const p2 = new THREE.Mesh(platGeo, platMat);
+            p2.position.set(-35, 7.0, -10);
+            p2.castShadow = true;
+            p2.receiveShadow = true;
+            scene.add(p2);
+            platforms.push({ x: -35, z: -10, y: 7.0, radius: 2.2 });
+
+            // 3段階目の最上段足場 (光のしずくが載っている場所)
+            const p3 = new THREE.Mesh(platGeo, platMat);
+            p3.position.set(-35, 10.5, -15);
+            p3.castShadow = true;
+            p3.receiveShadow = true;
+            scene.add(p3);
+            platforms.push({ x: -35, z: -15, y: 10.5, radius: 2.2 });
+        }
+
+        function createPlayer() {
+            player = new THREE.Group();
+
+            // Spirit Glowing Body (少しぽってりとしたかわいらしい形状に)
+            const bodyGeo = new THREE.SphereGeometry(0.7, 24, 24);
+            bodyGeo.scale(1.0, 0.92, 1.0); // 少し横長でぽってり
+            const bodyMat = new THREE.MeshStandardMaterial({
+                color: 0xdcfce7,
+                emissive: 0x86efac,
+                emissiveIntensity: 0.5,
+                roughness: 0.2
+            });
+            playerBody = new THREE.Mesh(bodyGeo, bodyMat);
+            playerBody.position.y = 0.8;
+            playerBody.castShadow = true;
+            player.add(playerBody);
+
+            // 顔パーツ用のグループ（体の変形・伸縮の影響を受けないよう独立）
+            const faceGroup = new THREE.Group();
+            faceGroup.position.set(0, 0.8, 0);
+            player.add(faceGroup);
+
+            // Spirit Eyes (大きめのくりっくりな目 - 体の表面よりしっかり前に配置)
+            const eyeGeo = new THREE.SphereGeometry(0.13, 16, 16);
+            const eyeMat = new THREE.MeshBasicMaterial({ color: 0x14532d });
+            
+            const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+            leftEye.position.set(-0.24, 0.12, 0.64);
+            
+            const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
+            rightEye.position.set(0.24, 0.12, 0.64);
+
+            // Eye Highlights (目にキラキラした白いハイライト)
+            const highlightGeo = new THREE.SphereGeometry(0.045, 8, 8);
+            const highlightMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            
+            const leftHighlight = new THREE.Mesh(highlightGeo, highlightMat);
+            leftHighlight.position.set(-0.20, 0.16, 0.73);
+            
+            const rightHighlight = new THREE.Mesh(highlightGeo, highlightMat);
+            rightHighlight.position.set(0.28, 0.16, 0.73);
+
+            faceGroup.add(leftEye); faceGroup.add(rightEye);
+            faceGroup.add(leftHighlight); faceGroup.add(rightHighlight);
+
+            // Cheeks (ほんのりピンクのほっぺ)
+            const cheekGeo = new THREE.SphereGeometry(0.09, 8, 8);
+            cheekGeo.scale(1.2, 0.6, 0.5);
+            const cheekMat = new THREE.MeshBasicMaterial({ color: 0xf472b6 });
+            
+            const leftCheek = new THREE.Mesh(cheekGeo, cheekMat);
+            leftCheek.position.set(-0.33, 0.01, 0.62);
+            
+            const rightCheek = new THREE.Mesh(cheekGeo, cheekMat);
+            rightCheek.position.set(0.33, 0.01, 0.62);
+
+            faceGroup.add(leftCheek); faceGroup.add(rightCheek);
+
+            // Cute Ears (ぴょこっと生えた小さな精霊のみみ)
+            const earGeo = new THREE.ConeGeometry(0.18, 0.5, 12);
+            earGeo.rotateX(-0.2);
+            const earMat = new THREE.MeshStandardMaterial({
+                color: 0xbbf7d0,
+                emissive: 0x86efac,
+                emissiveIntensity: 0.4,
+                roughness: 0.3
+            });
+
+            const leftEar = new THREE.Mesh(earGeo, earMat);
+            leftEar.position.set(-0.38, 1.32, 0.05);
+            leftEar.rotation.z = 0.35;
+
+            const rightEar = new THREE.Mesh(earGeo, earMat);
+            rightEar.position.set(0.38, 1.32, 0.05);
+            rightEar.rotation.z = -0.35;
+
+            playerBody.add(leftEar);
+            playerBody.add(rightEar);
+
+            // Soft Light Source around Spirit
+            const spiritLight = new THREE.PointLight(0x86efac, 1.2, 8);
+            spiritLight.position.y = 1;
+            player.add(spiritLight);
+
+            player.position.set(0, 0, 15);
+            scene.add(player);
+        }
+
+        function spawnAltar() {
+            altar = new THREE.Group();
+
+            // Stone Base
+            const baseGeo = new THREE.CylinderGeometry(3.5, 4, 0.8, 8);
+            const stoneMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.9 });
+            const base = new THREE.Mesh(baseGeo, stoneMat);
+            base.position.y = 0.4;
+            base.receiveShadow = true;
+            altar.add(base);
+
+            // Ancient Pillars
+            const pillarGeo = new THREE.CylinderGeometry(0.3, 0.4, 2.5, 6);
+            for (let i = 0; i < 4; i++) {
+                const angle = (i / 4) * Math.PI * 2;
+                const pillar = new THREE.Mesh(pillarGeo, stoneMat);
+                pillar.position.set(Math.cos(angle) * 2.5, 1.6, Math.sin(angle) * 2.5);
+                pillar.castShadow = true;
+                altar.add(pillar);
+            }
+
+            altar.position.set(0, 0, 0);
+            scene.add(altar);
+        }
+
+        function spawnOrbs() {
+            const orbGeo = new THREE.SphereGeometry(0.4, 12, 12);
+            const orbMat = new THREE.MeshStandardMaterial({
+                color: 0xfef08a,
+                emissive: 0xeab308,
+                emissiveIntensity: 0.8
+            });
+
+            const positions = [
+                { x: 15, z: 15, h: 2.8 }, { x: -20, z: 10, h: 2.8 }, 
+                { x: 25, z: -15, h: 2.8 }, { x: -15, z: -25, h: 2.8 },
+                { x: 35, z: 5, h: 2.8 },  { x: -30, z: 30, h: 2.8 }, 
+                { x: pitHole.x, z: pitHole.z, h: -4.0 }, // 7つ目：地面の穴の中
+                { x: -35, z: -15, h: 10.5 } // 8つ目：高くなった最上段足場の上に配置
+            ];
+
+            positions.forEach((pos, idx) => {
+                const orbGroup = new THREE.Group();
+                const mesh = new THREE.Mesh(orbGeo, orbMat);
+                mesh.position.y = pos.h;
+                mesh.castShadow = true;
+                orbGroup.add(mesh);
+
+                const light = new THREE.PointLight(0xfde047, 1, 5);
+                light.position.y = pos.h;
+                orbGroup.add(light);
+
+                orbGroup.position.set(pos.x, 0, pos.z);
+                orbGroup.userData = { id: idx, baseHeight: pos.h };
+
+                scene.add(orbGroup);
+                orbs.push(orbGroup);
+            });
+
+            document.getElementById('orb-total').innerText = TOTAL_ORBS;
+        }
+
+        // ==========================================
+        // Event Listeners & Interaction
+        function initEvents() {
+            const container = document.getElementById('canvas-container');
+
+            // Keyboard Controls
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'm' || e.key === 'M') {
+                    toggleMap();
+                    return;
+                }
+                if (['w', 'W', 'ArrowUp'].includes(e.key)) moveState.forward = true;
+                if (['s', 'S', 'ArrowDown'].includes(e.key)) moveState.backward = true;
+                if (['a', 'A', 'ArrowLeft'].includes(e.key)) moveState.left = true;
+                if (['d', 'D', 'ArrowRight'].includes(e.key)) moveState.right = true;
+                if (e.code === 'Space') { e.preventDefault(); jump(); }
+            });
+
+            window.addEventListener('keyup', (e) => {
+                if (['w', 'W', 'ArrowUp'].includes(e.key)) moveState.forward = false;
+                if (['s', 'S', 'ArrowDown'].includes(e.key)) moveState.backward = false;
+                if (['a', 'A', 'ArrowLeft'].includes(e.key)) moveState.left = false;
+                if (['d', 'D', 'ArrowRight'].includes(e.key)) moveState.right = false;
+            });
+
+            // Pointer Lock for Mouse Look
+            container.addEventListener('click', () => {
+                if (!isPointerLocked && document.getElementById('start-overlay').classList.contains('hidden')) {
+                    container.requestPointerLock();
+                }
+            });
+
+            document.addEventListener('pointerlockchange', () => {
+                isPointerLocked = (document.pointerLockElement === container);
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isPointerLocked) return;
+                cameraAngleX -= e.movementX * 0.003;
+                cameraAngleY += e.movementY * 0.003;
+                cameraAngleY = Math.max(0.1, Math.min(Math.PI / 2.5, cameraAngleY));
+            });
+
+            // Map UI Events
+            document.getElementById('btn-map-toggle').addEventListener('click', (e) => {
+                e.stopPropagation();
+                toggleMap();
+            });
+
+            // Mobile Jump Button
+            const mobileJumpBtn = document.getElementById('btn-jump-mobile');
+            if (mobileJumpBtn) {
+                mobileJumpBtn.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    jump();
+                });
+            }
+
+            // Touch Drag / Swipe Support
+            window.addEventListener('touchstart', (e) => {
+                for (let touch of e.changedTouches) {
+                    if (touchLeftId === null) {
+                        touchLeftId = touch.identifier;
+                        touchStartX = touch.clientX;
+                        touchStartY = touch.clientY;
+                    }
+                }
+            });
+
+            window.addEventListener('touchmove', (e) => {
+                for (let touch of e.changedTouches) {
+                    if (touch.identifier === touchLeftId) {
+                        const dx = touch.clientX - touchStartX;
+                        const dy = touch.clientY - touchStartY;
+                        moveState.forward = dy < -10;
+                        moveState.backward = dy > 10;
+                        moveState.left = dx < -10;
+                        moveState.right = dx > 10;
+
+                        // Camera Look with touch swipe
+                        cameraAngleX -= dx * 0.0005;
+                    }
+                }
+            });
+
+            window.addEventListener('touchend', (e) => {
+                for (let touch of e.changedTouches) {
+                    if (touch.identifier === touchLeftId) {
+                        touchLeftId = null;
+                        moveState.forward = moveState.backward = moveState.left = moveState.right = false;
+                    }
+                }
+            });
+
+            // Start & Restart Buttons
+            document.getElementById('btn-start').addEventListener('click', () => {
+                sfx.init();
+                document.getElementById('start-overlay').classList.add('hidden');
+                container.requestPointerLock();
+            });
+
+            document.getElementById('btn-restart').addEventListener('click', () => {
+                location.reload();
+            });
+
+            window.addEventListener('resize', onWindowResize);
+
+            // 初期状態は確実に非表示
+            toggleMap(false);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function toggleMap(forceState) {
+            isMapVisible = (forceState !== undefined) ? forceState : !isMapVisible;
+            const minimapContainer = document.getElementById('minimap-container');
+            if (minimapContainer) {
+                if (isMapVisible) {
+                    minimapContainer.classList.remove('hidden');
+                } else {
+                    minimapContainer.classList.add('hidden');
+                }
+            }
+        }
+
+        function jump() {
+            if (isGrounded) {
+                playerVel.y = 0.38;
+                isGrounded = false;
+                sfx.playJump();
+            }
+        }
+
+        // ==========================================
+        // Game Logic & Updates
+        // ==========================================
+        function updatePlayer() {
+            const speed = 0.22;
+            const dir = new THREE.Vector3();
+
+            // カメラの向きに基づく移動方向の計算（左右方向を正常化）
+            const forward = new THREE.Vector3(-Math.sin(cameraAngleX), 0, -Math.cos(cameraAngleX)).normalize();
+            const right = new THREE.Vector3().crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize();
+
+            if (moveState.forward) dir.add(forward);
+            if (moveState.backward) dir.sub(forward);
+            if (moveState.left) dir.sub(right);
+            if (moveState.right) dir.add(right);
+
+            if (dir.lengthSq() > 0) {
+                dir.normalize().multiplyScalar(speed);
+                player.position.x += dir.x;
+                player.position.z += dir.z;
+
+                // 進行方向へスムーズに回転
+                const targetRotation = Math.atan2(dir.x, dir.z);
+                player.rotation.y = targetRotation;
+
+                // 歩行時のぴょこぴょこアニメーション
+                const t = Date.now() * 0.012;
+                playerBody.scale.set(
+                    1 + Math.sin(t) * 0.05,
+                    0.92 + Math.cos(t) * 0.05,
+                    1 + Math.sin(t) * 0.05
+                );
+            } else {
+                // 待機時のフワフワ呼吸アニメーション
+                const t = Date.now() * 0.003;
+                playerBody.scale.set(1, 0.92 + Math.sin(t) * 0.03, 1);
+            }
+
+            // 重力処理（よりふんわりとした浮遊感へ軽減）
+            playerVel.y -= 0.009;
+            player.position.y += playerVel.y;
+
+            // 地面・足場・穴の高さ計算
+            let groundY = 0;
+
+            // 穴（Pit Hole）の中にいるかの判定
+            const distToPit = Math.hypot(player.position.x - pitHole.x, player.position.z - pitHole.z);
+            if (distToPit < pitHole.radius) {
+                groundY = -pitHole.depth; // 穴の底
+            } else {
+                // 空中足場（Platforms）の上にいるかの判定
+                for (let plat of platforms) {
+                    const distToPlat = Math.hypot(player.position.x - plat.x, player.position.z - plat.z);
+                    if (distToPlat < plat.radius && player.position.y >= plat.y) {
+                        groundY = plat.y + 0.3;
+                        break;
+                    }
+                }
+            }
+
+            // 着地処理
+            if (player.position.y <= groundY) {
+                player.position.y = groundY;
+                playerVel.y = 0;
+                isGrounded = true;
+            }
+
+            // 移動範囲制限（エリア外落下防止）
+            const maxBoundary = 72;
+            player.position.x = Math.max(-maxBoundary, Math.min(maxBoundary, player.position.x));
+            player.position.z = Math.max(-maxBoundary, Math.min(maxBoundary, player.position.z));
+        }
+
+        function updateCamera() {
+            // 三人称（TPS）カメラの追従計算
+            const distance = 11;
+            const camX = player.position.x + Math.sin(cameraAngleX) * distance * Math.cos(cameraAngleY);
+            const camY = player.position.y + Math.sin(cameraAngleY) * distance + 1.5;
+            const camZ = player.position.z + Math.cos(cameraAngleX) * distance * Math.cos(cameraAngleY);
+
+            camera.position.set(camX, camY, camZ);
+            camera.lookAt(player.position.x, player.position.y + 1.2, player.position.z);
+        }
+
+        function checkCollectibles() {
+            orbs.forEach((orbGroup) => {
+                if (!orbGroup.visible) return;
+
+                // 距離判定（高さYもチェック）
+                const distXZ = Math.hypot(player.position.x - orbGroup.position.x, player.position.z - orbGroup.position.z);
+                const orbY = orbGroup.userData.baseHeight;
+                const distY = Math.abs(player.position.y - orbY);
+
+                // 近距離かつ高さが適合している場合に取得（判定範囲を拡大: distXZ < 2.5, distY < 1.5）
+                if (distXZ < 2.5 && distY < 1.5) {
+                    orbGroup.visible = false;
+                    collectedCount++;
+                    sfx.playCollect();
+
+                    // UI更新
+                    document.getElementById('orb-count').innerText = collectedCount;
+                    showToast('光のしずくをゲットした！');
+
+                    if (collectedCount === TOTAL_ORBS) {
+                        document.getElementById('goal-panel').classList.remove('hidden');
+                        document.getElementById('goal-text').innerText = '中央の古き祭壇へ移動しよう！';
+                        showToast('すべての光のしずくが集まりました！祭壇へ向かいましょう！');
+                    }
+                }
+
+                // 光のしずくの浮遊・回転アニメーション
+                if (orbGroup.visible) {
+                    const time = Date.now() * 0.003;
+                    orbGroup.children[0].position.y = orbY + Math.sin(time + orbGroup.userData.id) * 0.2;
+                    orbGroup.rotation.y += 0.02;
+                }
+            });
+
+            // 祭壇（Goal）到達判定
+            if (collectedCount === TOTAL_ORBS) {
+                const distToAltar = Math.hypot(player.position.x - altar.position.x, player.position.z - altar.position.z);
+                if (distToAltar < 3.0) {
+                    sfx.playWin();
+                    document.exitPointerLock();
+                    document.getElementById('victory-overlay').classList.remove('hidden');
+                }
+            }
+        }
+
+        function showToast(text) {
+            const toast = document.getElementById('msg-toast');
+            toast.innerText = text;
+            toast.style.opacity = '1';
+            setTimeout(() => {
+                toast.style.opacity = '0';
+            }, 2500);
+        }
+
+        // ==========================================
+        // Minimap Render Logic
+        // ==========================================
+        function drawMinimap() {
+            if (!isMapVisible) return;
+            const canvas = document.getElementById('minimap-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width;
+            const h = canvas.height;
+            const center = w / 2;
+            const mapScale = 0.8; // 3D空間座標とミニマップ座標のスケール変換比
+
+            // 背景クリア
+            ctx.clearRect(0, 0, w, h);
+
+            // 祭壇 (青い円)
+            const altarX = center + (altar.position.x - player.position.x) * mapScale;
+            const altarY = center + (altar.position.z - player.position.z) * mapScale;
+            if (Math.hypot(altarX - center, altarY - center) < center - 4) {
+                ctx.fillStyle = '#38bdf8';
+                ctx.beginPath();
+                ctx.arc(altarX, altarY, 5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // 残りの「光のしずく」 (黄色い円)
+            orbs.forEach(orb => {
+                if (orb.visible) {
+                    const ox = center + (orb.position.x - player.position.x) * mapScale;
+                    const oy = center + (orb.position.z - player.position.z) * mapScale;
+                    if (Math.hypot(ox - center, oy - center) < center - 6) {
+                        ctx.fillStyle = '#fde047';
+                        ctx.beginPath();
+                        ctx.arc(ox, oy, 4, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+            });
+
+            // プレイヤー自身 (中央の緑の矢印：回転方向を正常化)
+            ctx.save();
+            ctx.translate(center, center);
+            ctx.rotate(player.rotation.y);
+
+            ctx.fillStyle = '#4ade80';
+            ctx.beginPath();
+            ctx.moveTo(0, -6);
+            ctx.lineTo(4, 5);
+            ctx.lineTo(0, 3);
+            ctx.lineTo(-4, 5);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        // ==========================================
+        // Main Loop
+        // ==========================================
+        function animate() {
+            requestAnimationFrame(animate);
+
+            updatePlayer();
+            updateCamera();
+            checkCollectibles();
+            drawMinimap();
+
+            renderer.render(scene, camera);
+        }
+
+        // Window Load Start
+        window.onload = function() {
+            init();
+            animate();
+        };
+    </script>
+<script>
+// PointerLock: 拒否されたときの未処理エラーを防ぐ
+(function(){const o=Element.prototype.requestPointerLock;if(!o)return;
+  Element.prototype.requestPointerLock=function(...a){try{const r=o.apply(this,a);if(r&&r.catch)r.catch(()=>{});return r;}catch(e){}};})();
+// ================= Realism Pack (PBR / 手続き型テクスチャ / 空 / 大気) =================
+function hash(x,y){const s=Math.sin(x*127.1+y*311.7)*43758.5453;return s-Math.floor(s);}
+function vnoise(x,y,px,py){const xi=Math.floor(x),yi=Math.floor(y),xf=x-xi,yf=y-yi,u=xf*xf*(3-2*xf),v=yf*yf*(3-2*yf);
+  const w=(a,p)=>((a%p)+p)%p,x0=w(xi,px),x1=w(xi+1,px),y0=w(yi,py),y1=w(yi+1,py);
+  return hash(x0,y0)*(1-u)*(1-v)+hash(x1,y0)*u*(1-v)+hash(x0,y1)*(1-u)*v+hash(x1,y1)*u*v;}
+function tfbm(x,y,px,py,o){let a=.5,f=1,s=0;for(let i=0;i<o;i++){s+=a*vnoise(x*f,y*f,px*f,py*f);f*=2;a*=.5}return s;}
+function mx(a,b,t){t=Math.max(0,Math.min(1,t));return [a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];}
+const _texCache={};
+function makeTex(size,fn,rx,ry){
+  const key=fn.name+size;let cv=_texCache[key];
+  if(!cv){
+    const c=document.createElement('canvas'),c2=document.createElement('canvas');c.width=c.height=c2.width=c2.height=size;
+    const x=c.getContext('2d'),x2=c2.getContext('2d'),a=x.createImageData(size,size),b=x2.createImageData(size,size);
+    for(let py=0;py<size;py++)for(let px=0;px<size;px++){const r=fn(px/size,py/size),i=(py*size+px)*4,h=Math.max(0,Math.min(1,r[3]))*255;
+      a.data[i]=r[0];a.data[i+1]=r[1];a.data[i+2]=r[2];a.data[i+3]=255;b.data[i]=b.data[i+1]=b.data[i+2]=h;b.data[i+3]=255;}
+    x.putImageData(a,0,0);x2.putImageData(b,0,0);cv=_texCache[key]=[c,c2];
+  }
+  const mk=(canvas,srgb)=>{const t=new THREE.CanvasTexture(canvas);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(rx,ry);t.anisotropy=8;if(srgb)t.encoding=THREE.sRGBEncoding;return t;};
+  return {map:mk(cv[0],true),bump:mk(cv[1],false)};
+}
+const grassFn=(u,v)=>{const n=tfbm(u*8,v*8,8,8,5),f=tfbm(u*64,v*64,64,64,2),p=tfbm(u*4,v*4,4,4,3);
+  let c=mx([26,50,20],[92,124,46],n*.7+f*.5-.1);c=mx(c,[96,80,48],(p-.55)*2.2);const s=.92+hash(u*997,v*991)*.12;
+  return [c[0]*s,c[1]*s,c[2]*s,n*.5+f*.5];};
+const barkFn=(u,v)=>{const n=tfbm(u*8,v*3,8,3,5),r=1-Math.abs(2*tfbm(u*8+5,v*2,8,2,3)-1);
+  const c=mx([34,25,18],[110,88,66],r*.6+n*.5);return [c[0],c[1],c[2],r*.7+n*.3];};
+const rockFn=(u,v)=>{const n=tfbm(u*6,v*6,6,6,5),cr=Math.abs(tfbm(u*5,v*5,5,5,3)-.5)<.025?.45:1;
+  const c=mx([92,90,84],[158,152,140],n);return [c[0]*cr,c[1]*cr,c[2]*cr,n*(cr<1?.2:1)];};
+const leafFn=(u,v)=>{const n=tfbm(u*14,v*14,14,14,4),l=tfbm(u*40,v*40,40,40,2);
+  let c=mx([20,58,20],[110,150,54],n*.8+l*.4-.1);const d=n<.38?.55:1;return [c[0]*d,c[1]*d,c[2]*d,n*.6+l*.4];};
+function glowTexture(){const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d'),g=x.createRadialGradient(64,64,0,64,64,64);
+  g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(.25,'rgba(255,255,255,.45)');g.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=g;x.fillRect(0,0,128,128);return new THREE.CanvasTexture(c);}
+function blob(g,amp,freq){const p=g.attributes.position,v=new THREE.Vector3();
+  for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i);const n=vnoise(v.x*freq+v.z*.7+50,v.y*freq+v.z*.3+50,9999,9999);v.multiplyScalar(1+(n-.5)*amp);p.setXYZ(i,v.x,v.y,v.z);}
+  g.computeVertexNormals();return g;}
+
+let sky, sun, windU={value:0}, fireflies, glowTex;
+const sunOff=new THREE.Vector3(45,70,30), FOG=0xc7dbcc;
+
+function init(){
+  const container=document.getElementById('canvas-container');
+  scene=new THREE.Scene();scene.background=new THREE.Color(FOG);scene.fog=new THREE.FogExp2(FOG,0.011);
+  camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,0.1,500);
+  renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
+  renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  renderer.outputEncoding=THREE.sRGBEncoding;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;
+  container.appendChild(renderer.domElement);
+  scene.add(new THREE.HemisphereLight(0xbfe3ff,0x3a4a2a,0.65));
+  sun=new THREE.DirectionalLight(0xfff0cf,2.6);sun.castShadow=true;sun.shadow.mapSize.set(4096,4096);
+  Object.assign(sun.shadow.camera,{left:-50,right:50,top:50,bottom:-50,near:1,far:220});
+  sun.shadow.bias=-0.0004;sun.shadow.normalBias=0.04;sun.position.copy(sunOff);scene.add(sun,sun.target);
+  glowTex=glowTexture();
+  buildSky();buildTerrain();buildForestProps();createPlayer();upgradePlayer();spawnAltar();spawnOrbs();upgradeOrbs();buildAtmosphere();initEvents();
+}
+
+function buildSky(){
+  sky=new THREE.Mesh(new THREE.SphereGeometry(350,32,16),new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,fog:false,
+    uniforms:{sunDir:{value:sunOff.clone().normalize()}},
+    vertexShader:'varying vec3 vP;void main(){vP=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+    fragmentShader:'varying vec3 vP;uniform vec3 sunDir;void main(){vec3 d=normalize(vP);float h=clamp(d.y,0.,1.);vec3 c=mix(vec3(.78,.86,.80),vec3(.22,.47,.78),pow(h,.5));float s=max(dot(d,sunDir),0.);c+=vec3(1.,.85,.55)*(pow(s,700.)*3.+pow(s,10.)*.22);gl_FragColor=vec4(c,1.);}'}));
+  sky.renderOrder=-1;sky.frustumCulled=false;scene.add(sky);
+}
+
+function buildTerrain(){
+  const g=makeTex(512,grassFn,1/8,1/8);
+  const shape=new THREE.Shape();shape.moveTo(-200,-200);shape.lineTo(200,-200);shape.lineTo(200,200);shape.lineTo(-200,200);shape.closePath();
+  const hole=new THREE.Path();hole.absarc(pitHole.x,-pitHole.z,4.0,0,Math.PI*2,true);shape.holes.push(hole);
+  const ground=new THREE.Mesh(new THREE.ShapeGeometry(shape,32),new THREE.MeshStandardMaterial({map:g.map,bumpMap:g.bump,bumpScale:2.5,roughness:.95,metalness:0}));
+  ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
+  buildPitHole();
+  const hg=blob(new THREE.SphereGeometry(14,32,20),.7,.35),hm=g=>new THREE.MeshStandardMaterial({map:g.map,bumpMap:g.bump,bumpScale:3,color:0xb8d0b0,roughness:1});
+  const hmat=hm(makeTex(256,grassFn,6,3));
+  for(let i=0;i<60;i++){const ring=i<34,a=Math.random()*Math.PI*2,r=ring?76+Math.random()*10:105+Math.random()*25,h=new THREE.Mesh(hg,hmat),s=ring?.9+Math.random()*.9:2+Math.random()*1.5;
+    h.position.set(Math.cos(a)*r,-3,Math.sin(a)*r);h.scale.set(s*1.2,s*(.7+Math.random()*.6),s*1.2);h.rotation.y=Math.random()*6;scene.add(h);}
+}
+
+function buildPitHole(){
+  const r=makeTex(256,rockFn,3,1),rm=new THREE.MeshStandardMaterial({map:r.map,bumpMap:r.bump,bumpScale:4,roughness:.95,side:THREE.BackSide,color:0x888888});
+  const wall=new THREE.Mesh(new THREE.CylinderGeometry(4.0,4.0,pitHole.depth,32,1,true),rm);wall.position.set(pitHole.x,-pitHole.depth/2,pitHole.z);wall.receiveShadow=true;scene.add(wall);
+  const bm=new THREE.MeshStandardMaterial({map:r.map,bumpMap:r.bump,bumpScale:3,roughness:1,color:0x555555});
+  const bottom=new THREE.Mesh(new THREE.CircleGeometry(4.0,32),bm);bottom.rotation.x=-Math.PI/2;bottom.position.set(pitHole.x,-pitHole.depth,pitHole.z);bottom.receiveShadow=true;scene.add(bottom);
+  const rim=new THREE.Mesh(new THREE.TorusGeometry(4.2,.45,10,40),new THREE.MeshStandardMaterial({map:r.map,bumpMap:r.bump,bumpScale:4,roughness:.95}));
+  rim.rotation.x=Math.PI/2;rim.position.set(pitHole.x,.05,pitHole.z);rim.scale.z=.6;rim.castShadow=rim.receiveShadow=true;scene.add(rim);
+}
+
+function buildForestProps(){
+  const bark=makeTex(256,barkFn,3,2),leaf=makeTex(256,leafFn,3,3),rock=makeTex(256,rockFn,2,2);
+  const trunkGeo=new THREE.CylinderGeometry(.32,.62,5,12,6);trunkGeo.translate(0,2.5,0);
+  const trunkMat=new THREE.MeshStandardMaterial({map:bark.map,bumpMap:bark.bump,bumpScale:3,roughness:1});
+  const lm=c=>new THREE.MeshStandardMaterial({map:leaf.map,bumpMap:leaf.bump,bumpScale:2,color:c,roughness:.85});
+  const leafMats=[0xffffff,0xd8f0b0,0xa8d890].map(lm),conMat=lm(0x7fae88);
+  const crowns=[2.2,3.1,4].map(f=>blob(new THREE.SphereGeometry(1,24,16),.55,f)),coneGeo=new THREE.ConeGeometry(1,2.6,16,3);
+  const avoid=(x,z)=>Math.hypot(x,z)<10||Math.hypot(x-pitHole.x,z-pitHole.z)<8||(Math.abs(x+35)<6&&z>-22&&z<0);
+  for(let i=0;i<90;i++){
+    let x,z;do{x=(Math.random()-.5)*120;z=(Math.random()-.5)*120}while(avoid(x,z));
+    const t=new THREE.Group(),trunk=new THREE.Mesh(trunkGeo,trunkMat);trunk.castShadow=trunk.receiveShadow=true;t.add(trunk);
+    if(Math.random()<.35){for(let k=0;k<5;k++){const c=new THREE.Mesh(coneGeo,conMat),r=2.4-k*.42;c.scale.set(r,1,r);c.position.y=2.4+k*1.35;c.castShadow=true;t.add(c);}}
+    else{for(let k=0;k<5;k++){const c=new THREE.Mesh(crowns[Math.floor(Math.random()*3)],leafMats[Math.floor(Math.random()*3)]),s=1.5+Math.random()*1.1;
+      c.scale.set(s,s*.8,s);c.position.set((Math.random()-.5)*2.6,5+Math.random()*2.2,(Math.random()-.5)*2.6);c.rotation.y=Math.random()*6;c.castShadow=c.receiveShadow=true;t.add(c);}}
+    t.scale.setScalar(.8+Math.random()*.7);t.rotation.y=Math.random()*6.28;t.position.set(x,0,z);scene.add(t);
+  }
+  const rg=blob(new THREE.SphereGeometry(1,20,14),.8,1.6),rmat=new THREE.MeshStandardMaterial({map:rock.map,bumpMap:rock.bump,bumpScale:4,roughness:.9});
+  for(let i=0;i<45;i++){let x,z;do{x=(Math.random()-.5)*130;z=(Math.random()-.5)*130}while(avoid(x,z));
+    const m=new THREE.Mesh(rg,rmat),s=.3+Math.random()*1.1;m.scale.set(s*1.3,s*.6,s);m.position.set(x,s*.15,z);m.rotation.set(Math.random()*.4,Math.random()*6,Math.random()*.4);m.castShadow=m.receiveShadow=true;scene.add(m);}
+  // 風にそよぐ草（インスタンス描画）
+  const bg=new THREE.PlaneGeometry(.12,.9,1,3);bg.translate(0,.45,0);const bp=bg.attributes.position,cols=[];
+  for(let i=0;i<bp.count;i++){const y=bp.getY(i)/.9;bp.setX(i,bp.getX(i)*(1-y*.85));const k=.35+y*.65;cols.push(.5*k,.8*k,.3*k);}
+  bg.setAttribute('color',new THREE.Float32BufferAttribute(cols,3));
+  const gm=new THREE.MeshStandardMaterial({vertexColors:true,side:THREE.DoubleSide,roughness:.9});
+  gm.onBeforeCompile=s=>{s.uniforms.uTime=windU;s.vertexShader='uniform float uTime;\n'+s.vertexShader.replace('#include <begin_vertex>',
+    'vec3 transformed=vec3(position);float sw=position.y*position.y;transformed.x+=sin(uTime*1.6+instanceMatrix[3].x*.5+instanceMatrix[3].z*.4)*.22*sw;transformed.z+=cos(uTime*1.3+instanceMatrix[3].z*.5)*.12*sw;');};
+  const N=30000,gi=new THREE.InstancedMesh(bg,gm,N),d=new THREE.Object3D(),col=new THREE.Color();let n=0;
+  while(n<N){const x=(Math.random()-.5)*130,z=(Math.random()-.5)*130;
+    if(Math.hypot(x-pitHole.x,z-pitHole.z)<4.6||Math.hypot(x,z)<4.2)continue;
+    d.position.set(x,0,z);d.rotation.y=Math.random()*6.28;d.scale.set(1,.6+Math.random()*.9,1);d.updateMatrix();gi.setMatrixAt(n,d.matrix);
+    gi.setColorAt(n,col.setRGB(.7+Math.random()*.5,.8+Math.random()*.4,.6+Math.random()*.5));n++;}
+  gi.receiveShadow=true;gi.frustumCulled=false;scene.add(gi);
+  // 花
+  const F=220,stem=new THREE.InstancedMesh(new THREE.CylinderGeometry(.012,.016,.5,4).translate(0,.25,0),new THREE.MeshStandardMaterial({color:0x3d6b2a}),F),
+    head=new THREE.InstancedMesh(new THREE.SphereGeometry(.09,10,8).scale(1,.5,1).translate(0,.52,0),new THREE.MeshStandardMaterial({roughness:.6}),F),pal=[0xffffff,0xfff2a0,0xf9a8d4,0xc4b5fd];
+  for(let i=0;i<F;i++){let x,z;do{x=(Math.random()-.5)*120;z=(Math.random()-.5)*120}while(avoid(x,z));
+    d.position.set(x,0,z);d.rotation.set((Math.random()-.5)*.3,0,(Math.random()-.5)*.3);d.scale.setScalar(.8+Math.random()*.6);d.updateMatrix();
+    stem.setMatrixAt(i,d.matrix);head.setMatrixAt(i,d.matrix);head.setColorAt(i,col.setHex(pal[i%4]));}
+  scene.add(stem,head);
+  buildPlatforms();
+}
+
+function buildPlatforms(){
+  const r=makeTex(256,rockFn,2,2),mat=new THREE.MeshStandardMaterial({map:r.map,bumpMap:r.bump,bumpScale:4,roughness:.9}),geo=new THREE.BoxGeometry(4,.6,4);
+  [[-35,3.5,-5],[-35,7,-10],[-35,10.5,-15]].forEach(([x,y,z])=>{const p=new THREE.Mesh(geo,mat);p.position.set(x,y,z);p.castShadow=p.receiveShadow=true;scene.add(p);platforms.push({x,z,y,radius:2.2});});
+}
+
+function spawnAltar(){
+  altar=new THREE.Group();const r=makeTex(256,rockFn,3,1),mat=new THREE.MeshStandardMaterial({map:r.map,bumpMap:r.bump,bumpScale:4,roughness:.9});
+  [[3.5,4,.8,.4],[2.8,3.2,.5,1.05]].forEach(([a,b,h,y])=>{const m=new THREE.Mesh(new THREE.CylinderGeometry(a,b,h,8),mat);m.position.y=y;m.castShadow=m.receiveShadow=true;altar.add(m);});
+  const pg=new THREE.CylinderGeometry(.3,.4,2.5,8);
+  for(let i=0;i<4;i++){const a=i/4*Math.PI*2,p=new THREE.Mesh(pg,mat);p.position.set(Math.cos(a)*2.5,2.1,Math.sin(a)*2.5);p.castShadow=p.receiveShadow=true;altar.add(p);}
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(1.6,.06,8,48),new THREE.MeshStandardMaterial({color:0x0ea5e9,emissive:0x38bdf8,emissiveIntensity:1.5}));
+  ring.rotation.x=Math.PI/2;ring.position.y=1.32;altar.add(ring);
+  const l=new THREE.PointLight(0x38bdf8,1.4,9);l.position.y=2;altar.add(l);scene.add(altar);
+}
+
+function upgradePlayer(){
+  const pm=(c,e,i)=>new THREE.MeshPhysicalMaterial({color:c,emissive:e,emissiveIntensity:i,roughness:.28,clearcoat:1,clearcoatRoughness:.15});
+  playerBody.material=pm(0xe9ffe9,0x6ee7a0,.35);playerBody.children.forEach(e=>e.material=pm(0xcaf9d8,0x6ee7a0,.3));
+  const s=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:0x86efac,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,opacity:.55}));s.scale.set(3.6,3.6,1);s.position.y=.8;player.add(s);
+}
+
+function upgradeOrbs(){
+  const m=new THREE.MeshPhysicalMaterial({color:0xfff3b0,emissive:0xffc21a,emissiveIntensity:1.6,roughness:.12,clearcoat:1});
+  orbs.forEach(o=>{const mesh=o.children[0];mesh.material=m;
+    const s=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:0xffd966,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,opacity:.8}));s.scale.set(2.8,2.8,1);mesh.add(s);});
+}
+
+function buildAtmosphere(){
+  const N=260,pos=new Float32Array(N*3);
+  for(let i=0;i<N;i++){pos[i*3]=(Math.random()-.5)*90;pos[i*3+1]=.5+Math.random()*5;pos[i*3+2]=(Math.random()-.5)*90;}
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  fireflies=new THREE.Points(g,new THREE.PointsMaterial({size:.45,map:glowTex,color:0xe6ff9a,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,opacity:.85}));
+  fireflies.frustumCulled=false;scene.add(fireflies);
+}
+
+function updateCamera(){
+  const distance=11,cx=player.position.x+Math.sin(cameraAngleX)*distance*Math.cos(cameraAngleY),
+    cy=player.position.y+Math.sin(cameraAngleY)*distance+1.5,cz=player.position.z+Math.cos(cameraAngleX)*distance*Math.cos(cameraAngleY);
+  camera.position.set(cx,cy,cz);camera.lookAt(player.position.x,player.position.y+1.2,player.position.z);
+  const t=performance.now()*.001;windU.value=t;
+  sky.position.copy(camera.position);
+  sun.position.copy(player.position).add(sunOff);sun.target.position.copy(player.position);sun.target.updateMatrixWorld();
+  const p=fireflies.geometry.attributes.position;
+  for(let i=0;i<p.count;i++){p.setY(i,p.getY(i)+Math.sin(t*.8+i)*.004);p.setX(i,p.getX(i)+Math.cos(t*.5+i*1.7)*.005);}
+  p.needsUpdate=true;fireflies.position.set(Math.round(player.position.x/90)*90,0,Math.round(player.position.z/90)*90);
+}
+
+</script>
+</body>
+</html>
